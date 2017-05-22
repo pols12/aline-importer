@@ -4,7 +4,7 @@ namespace TestM\Controller;
 
 use Zend\Mvc\Controller\AbstractActionController;
 use Zend\View\Model\ViewModel;
-use Omeka\Api\Manager as ApiManager;
+use Omeka\Api\Representation\ItemRepresentation;
 use Omeka\Entity\Item;
 //use TestM\Job\Insert;
 //Job\Insert;
@@ -12,12 +12,11 @@ use Omeka\Entity\Item;
 class ListController extends AbstractActionController {
     
     protected $config; //utilité ?
-    protected $doctrine;
+    protected $api;
     
-    public function __construct(array $config, $doctrineService) {
-        //parent(); //probablement inutile
+    public function __construct(array $config, $api) {
         $this->config = $config;
-        $this->doctrine = $doctrineService;
+        $this->api = $api;
     }
     
     /**
@@ -30,7 +29,7 @@ class ListController extends AbstractActionController {
         $item->setIsPublic(true);
         $item->setCreated(new DateTime('now'));
         $item->setModified(new DateTime('now'));
-        
+		
         // On récupère l'EntityManager
 //        $em = $this->getEvent()->getApplication()->getServiceManager()
 //                ->get('doctrine.orm.entity_manager');
@@ -51,14 +50,12 @@ class ListController extends AbstractActionController {
 //        return $this->render('OCPlatformBundle:Advert:add.html.twig');
     }
     
-    
-    /**
+
+	/**
      * Get an item using ApiManager().
-     * Does not work because I don’t know how to construct ApiManager object.
      * @param int $idItem
      */
     private function affWithApiManager(int $idItem) {
-        $apiManager = new ApiManager();
 //        // Compose the request object
 //        $request = new Request(Request::READ, 'item');
 //        $request->setId(100);
@@ -67,12 +64,12 @@ class ListController extends AbstractActionController {
 //        $response = $apiManager->execute($request);
 //        // Get the representation
 //        $item = $response->getContent();
-
+		
         // The above could be written more concisely (recommended usage)
-        $item = $apiManager->read('item', $idItem)->getContent();
-
-        // Do something with the representation.
-        echo $item->jsonSerialize();
+		/* @var $item ItemRepresentation */
+		$item = $this->api->read('items', $idItem)->getContent();
+		
+		return json_encode($item);
     }
     public function affAction() {
         
@@ -85,9 +82,10 @@ class ListController extends AbstractActionController {
         
         //Display an item using EntityManager
         
+		$content = $this->affWithApiManager(4);
         
         return new ViewModel([
-            'content' => 'Placeholder page'
+            'content' => $content
         ]);
     }
 }
