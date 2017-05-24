@@ -13,10 +13,12 @@ class ListControllerFactory implements FactoryInterface{
     
     public function __invoke(ContainerInterface $serviceLocator, $requestedName, array $options = null) {
         //$mediaIngesterManager = $serviceLocator->get('Omeka\MediaIngesterManager');
-        $doctrine = $serviceLocator->get('Omeka\ApiManager');
+        $apiManager = $serviceLocator->get('Omeka\ApiManager');
         $config = $serviceLocator->get('Config');
         
-        return new ListController($config, $doctrine);
+		$adapterManager= $serviceLocator->get('Omeka\ApiAdapterManager');
+		
+        return new ListController($config, $apiManager, $adapterManager);
     }
 
 }
