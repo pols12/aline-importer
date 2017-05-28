@@ -26,7 +26,48 @@ class ListController extends AbstractActionController {
 		$this->api = $api;
 		$this->adapterManager = $adapterManager;
     }
-    
+    	
+	public function postFile() {
+		$data = [];
+		$data['monFichier'] = new \CURLFile(__DIR__ . '/test.txt','text/plain','nomDuFichierSurLeServeur');
+		
+		//adding keys
+		$url="http://localhost/omeka-s/testm";
+		
+		$options=[
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_POSTFIELDS => $data,
+			CURLOPT_CUSTOMREQUEST => "POST",
+			CURLOPT_HTTPHEADER => ['Content-Type: multipart/form-data']
+		];
+		
+		$ch = curl_init($url);
+		curl_setopt_array($ch, $options);
+		$result=curl_exec($ch);
+		curl_close($ch);
+		return $result;
+	}
+	
+	/**
+     * Add a media to an existing item uploading a file using ApiManager.
+     * @param int $itemId Id of item which will have the media attached.
+     */
+    private function uploadWithApiManager($itemId) {
+		$fileIndex=0;
+
+		$data=[
+			"o:ingester" => "upload",
+			"file_index" => $fileIndex,
+			"o:item" => ["o:id" => $itemId]
+		];
+		$fileData = [
+			'file'=>[
+				$fileIndex => $_FILES['monFichier'],
+			],
+		];
+		return $this->api->create('media', $data, $fileData)->getContent();
+	}
+	
     /**
      * Insert an Item in DB.
      * @return type
@@ -184,9 +225,16 @@ class ListController extends AbstractActionController {
         //$this->insert($item);
         
         //Display an item using EntityManager
-//		$content = $this->affWithApiManager(32);
+//		$content = $this->affWithApiManager(8);
 		
-		$content=json_encode($this->addWithApiManager());
+		//Insert an item using ApiManager
+//		$content=json_encode($this->addWithApiManager());
+		
+		//Upload a file as Media using ApiManager
+		if(isset($_FILES['monFichier']))
+			$content = json_encode($this->uploadWithApiManager(38));
+		else
+			$content = $this->postFile();
 		
 		return new ViewModel([
 			'content' => $content

@@ -18,6 +18,10 @@ class ListControllerFactory implements FactoryInterface{
         
 		$adapterManager= $serviceLocator->get('Omeka\ApiAdapterManager');
 		
+		//We must allow client using cURL to upload file to ListController
+		$acl=$serviceLocator->get('Omeka\Acl');
+		$acl->allow(); //allow anybody to do anything anywhere
+		
         return new ListController($config, $apiManager, $adapterManager);
     }
 
