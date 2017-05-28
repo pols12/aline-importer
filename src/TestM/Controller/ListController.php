@@ -26,7 +26,7 @@ class ListController extends AbstractActionController {
 		$this->api = $api;
 		$this->adapterManager = $adapterManager;
     }
-    	
+	
 	public function postFile() {
 		$data = [];
 		$data['monFichier'] = new \CURLFile(__DIR__ . '/test.txt','text/plain','nomDuFichierSurLeServeur');
@@ -165,12 +165,13 @@ class ListController extends AbstractActionController {
      * Insert an item using ApiManager.
      */
     private function addWithApiManager() {
+		$fileIndex=0;
 		$data=[
 			"o:resource_class"=>["o:id"=>40],
 			"title"=> [[
 				"type"=> "literal",
 				"property_id"=> 1,
-				"@value"=> "Tout en un"
+				"@value"=> "Nouvel Insert"
 			]],
 			"desc"=> [[
 				"type"=> "literal",
@@ -196,7 +197,24 @@ class ListController extends AbstractActionController {
 				"o:label"=> "Moteur de recherche Google"
 			]],
 		];
-		return $this->api->create('items', $data)->getContent();
+		
+		if(isset($_FILES['monFichier'])) {
+			$mediaData=[
+				"o:media" =>[[
+					"o:ingester" => "upload",
+					"file_index" => $fileIndex,
+				]],
+			];
+			$data = array_merge($data,$mediaData);
+			$fileData=[
+				'file'=>[
+					$fileIndex => $_FILES['monFichier'],
+				],
+			];
+		}
+		else $fileData = [];
+		
+		return $this->api->create('items', $data, $fileData)->getContent();
 	}
 	/**
      * Get an item using ApiManager.
@@ -231,8 +249,14 @@ class ListController extends AbstractActionController {
 //		$content=json_encode($this->addWithApiManager());
 		
 		//Upload a file as Media using ApiManager
+//		if(isset($_FILES['monFichier']))
+//			$content = json_encode($this->uploadWithApiManager(38));
+//		else
+//			$content = $this->postFile();
+		
+		//Create an item and attach a newly uploaded media in the same time
 		if(isset($_FILES['monFichier']))
-			$content = json_encode($this->uploadWithApiManager(38));
+			$content = json_encode($this->addWithApiManager());
 		else
 			$content = $this->postFile();
 		
