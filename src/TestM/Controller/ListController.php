@@ -5,24 +5,23 @@ namespace TestM\Controller;
 use Zend\Mvc\Controller\AbstractActionController;
 use Zend\View\Model\ViewModel;
 use Omeka\Api\Representation\ItemRepresentation;
-use Omeka\Api\Representation\ResourceClassRepresentation;
-use Omeka\Api\Representation\ResourceTemplateRepresentation;
 use Omeka\Entity\Item;
-use Omeka\Entity\Property;
 use Omeka\Entity\Value;
 //use TestM\Job\Insert;
 //Job\Insert;
 
 class ListController extends AbstractActionController {
     
-    protected $config; //utilité ?
+	/* @var $pdo \PDO */
+    protected $pdo;
     /* @var $api \Omeka\Api\Manager */
 	protected $api;
 	/* @var $adapterManager \Omeka\Api\Adapter\Manager */
     protected $adapterManager;
+	
     
-    public function __construct(array $config, $api, $adapterManager) {
-        $this->config = $config;
+    public function __construct(\PDO $pdo, $api, $adapterManager) {
+		$this->pdo = $pdo;
 		$this->api = $api;
 		$this->adapterManager = $adapterManager;
     }
@@ -49,6 +48,27 @@ class ListController extends AbstractActionController {
 	}
 	
 	/**
+     * Add a text as media to an existing item.
+     * @param string $text Contenu du media.
+	 * @param int $itemId Id of item which will have the media attached.
+     */
+    private function addHtmlMediaTo(string $text, string $titre, int $itemId) {
+
+		$data=[
+			"o:ingester" => "html",
+			"o:is_public" => false,
+			"o:item" => ["o:id" => $itemId],
+			"html" => htmlspecialchars($text),
+			"titre" => [[
+				"type" => "literal",
+				'property_id' => 1,
+				'@value' => $titre,
+			]]
+		];
+		return $this->api->create('media', $data)->getContent();
+	}
+	
+	/**
      * Add a media to an existing item uploading a file using ApiManager.
      * @param int $itemId Id of item which will have the media attached.
      */
@@ -70,94 +90,116 @@ class ListController extends AbstractActionController {
 	
     /**
      * Insert an Item in DB.
-     * @return type
+     * @return ItemRepresentation
      */
     public function addAction() {
-        // Création de l'entité
-        $item = new Item();
-        $item->setIsPublic(true);
-        $item->setCreated(new \DateTime('now'));
-        $item->setModified(new \DateTime('now'));
+		include 'itemSchemas.php';
+		$alineValueRows=$this->getValuesFromAline('archive','tout');
+		$this->eliminateUnusefullValues($alineValueRows, $addressPropertySchema);
+		$this->eliminateUnusefullValues($alineValueRows, $archivePropertySchema);
 		
-		/* @var $resourceClass \Omeka\Entity\ResourceClass */
-		$resourceClass=$this->adapterManager->get('resource_classes')
-				->findEntity(['localName'=>'Location']);
-		$item->setResourceClass($resourceClass);
+		//On s’occupe d’abord des adresses
 		
-		/* @var $resourceTemplate \Omeka\Entity\ResourceTemplate */
-		$resourceTemplate=$this->adapterManager->get('resource_templates')
-				->findEntity(['label'=>'Lieu d’archives']);
-		$item->setResourceTemplate($resourceTemplate);
+		$addressDataList = []; //Tableau indexant les tableaux JSON-LD des items
 		
-		/* @var $properties \Doctrine\Common\Collections\ArrayCollection */
-		$properties = $item->getValues(); //RDF triples
+		//Set ResourceClass and RessourceTemplate
+		$genericAddressData=[];
+		$genericAddressData['o:resource_class'] = $this->getResourceClassSchema('locn:Address');
+		$genericAddressData['o:resource_template'] = $this->getResourceTemplateSchema('Adresse');
 		
-		$archiveProperties=[
-			'dcterms'=>["title"],
-			'locn'=>["address"],
-			'foaf'=>['homepage'],
-		];
-		$archiveAdresseProperties=[
-			'locn'=>['fullAddress','postName','adminUnitL1'],
-		];
+		//Prepare schema
+		$this->setSchemaPropertyIds($addressPropertySchema);
 		
-		//For each vocabulary	
-			//get the vocabulary
-			/* @var $vocabularyAdapter \Omeka\Api\Adapter\VocabularyAdapter */
-			$vocabularyAdapter = $this->adapterManager->get('vocabularies');
-			/* @var $vocabulary \Omeka\Entity\Vocabulary */
-			$vocabulary=$vocabularyAdapter->findEntity(['prefix'=>'bibo']);
-
-			//For each property
-				//get the property from the vocabulary or maybe we must create one
-	//			$property = new Property();
-	//			$property->setVocabulary($vocabulary);
+		$allAddressItemProperties=[];
+		
+		//Get properties
+		foreach ($alineValueRows as $row) {//Pour chaque entrée dans Aline
+			$allAddressItemProperties[]=[];
+			$addressItemProperties=&$allAddressItemProperties[count($allAddressItemProperties)-1];
+			$this->addPropertiesToItem($addressItemProperties, $addressPropertySchema, $row);
+		}
+		
+		//Et on fusionne le tout pour remplir $itemDataList
+		foreach ($alineValueRows as $rowNumber => $row){
+			$properties = $allAddressItemProperties[$rowNumber];
+			if( !is_null($properties) )
+				$addressDataList[$row['id']] = array_merge($genericAddressData, $properties);
+		}
+		
+		//Tableau associant aux clés de $dataArray les ResourceReference des items créés
+		/* @var $addressItems array(\Omeka\Api\Representation\ResourceReference) */
+		$addressItems=$this->api->batchCreate('items', $addressDataList)->getContent();
+		
+		
+		//Maintenant on importe les lieux d’archives
+		
+		$archiveDataList = []; //Tableau indexant les tableaux JSON-LD des items
+		
+		//Set ResourceClass and RessourceTemplate
+		$genericArchiveData=[];
+		$genericArchiveData['o:resource_class'] = $this->getResourceClassSchema('dcterms:Location');
+		$genericArchiveData['o:resource_template'] = $this->getResourceTemplateSchema('Lieu d’archives');
+		
+		//On prépare le schéma
+		$this->setSchemaPropertyIds($archivePropertySchema);
+		
+		//On récupères les propriétés
+		$allArchiveItemProperties=[];
+		foreach ($alineValueRows as $row) {//Pour chaque entrée dans Aline
+			//On traite les jointures (ajout des Ids dans $row)
+			if( isset($addressItems[$row['id']]) )
+				$row['AddressItem']=$addressItems[$row['id']]->id();
 			
-				/* @var $terms \Doctrine\Common\Collections\ArrayCollection */
-				$terms=$vocabulary->getProperties();
-				
+			//Nouvel élément pour contenir toutes les propriétés de l’entrée Aline
+			$allArchiveItemProperties[]=[]; 
+			
+			//On récupère la référence de ce nouvel élément
+			$archiveItemProperties=&$allArchiveItemProperties[count($allArchiveItemProperties)-1];
+			
+			//Et on y ajoute les propriétés
+			$this->addPropertiesToItem($archiveItemProperties, $archivePropertySchema, $row);
+			
+			//Enfin, on y ajoute les notes cachées comme média
+			$this->addHiddenNotesToItem($archiveItemProperties, $row['nt']);
+		}
+		
+		//Et on fusionne le tout pour remplir $itemDataList
+		foreach ($alineValueRows as $rowNumber => $row){
+			$properties = $allArchiveItemProperties[$rowNumber];
+			if( !is_null($properties) )
+				$archiveDataList[$row['id']] = array_merge($genericArchiveData, $properties);
+		}
+		
+		$fileData=[];
+		$archiveItems=$this->api->batchCreate('items', $archiveDataList, $fileData)->getContent();
+		
+		return count($archiveItems);
+		// Old algorithm :
+		// $item = new Item(); $item->setOwner() et autres setters...
+		//For each vocabulary in the schema
+			//get the vocabulary using
+			// $this->adapterManager->get('vocabularies')->findEntity(['prefix'=>'bibo']);
+			//
+			//For each property associated to the voc in the schema
+				// Get the property from the vocabulary or maybe we must create one
+				// $property = new Property();
+				// $property->setVocabulary($vocabulary);
+				// OU
+				//
+				// /* @var $terms \Doctrine\Common\Collections\ArrayCollection */
+				// $terms=$vocabulary->getProperties();
 				//Voir comment on peut récupérer la propriété voulue, est-ce
 				// que les termes sont les clés dans cette ArrayCollection ?
-				
-//				/* @var $terms array[PropertyRepresentation] */
-//				$terms=$vocabularyAdapter->getRepresentation($vocabulary)->properties();
-				
+				//
 				//Create a value and set value properties
-				$value= new Value();
-				$value->setValue("ma valeur"); //or other setter
-
+				// $value= new Value();
+				// $value->setValue("ma valeur"); //or other setter
+				//
 				//Link property to the value
-				$value->setProperty($property);
-
+				// $value->setProperty($property);
+				//
 				//Add the property-linked value to the item
-				$properties->add($value);
-		
-		//On crée une representation de l’item
-		$itemAdapter = $this->adapterManager->get('items');
-		/* @var $itemRpz ItemRepresentation */
-		$itemRpz = $itemAdapter->getRepresentation($item);
-		echo json_encode($itemRpz);
-		
-		
-		/* @var $em \Doctrine\ORM\EntityManager */
-//		$em;
-        // On récupère l'EntityManager
-//        $em = $this->getEvent()->getApplication()->getServiceManager()
-//                ->get('doctrine.orm.entity_manager');
-
-        // Étape 1 : On « persiste » l'entité
-//        $em->persist($item);
-
-        // Étape 2 : On « flush » tout ce qui a été persisté avant
-//        $em->flush();
-
-        // Reste de la méthode qu'on avait déjà écrit
-//        if ($request->isMethod('POST')) {
-//          $request->getSession()->getFlashBag()->add('notice', 'Annonce bien enregistrée.');
-//          return $this->redirect($this->generateUrl('oc_platform_view', array('id' => $item->getId())));
-//        }
-
-//        return $this->render('OCPlatformBundle:Advert:add.html.twig');
+				// $item->getProperties()->add($value);
     }
     
 
@@ -255,13 +297,175 @@ class ListController extends AbstractActionController {
 //			$content = $this->postFile();
 		
 		//Create an item and attach a newly uploaded media in the same time
-		if(isset($_FILES['monFichier']))
-			$content = json_encode($this->addWithApiManager());
-		else
-			$content = $this->postFile();
+//		if(isset($_FILES['monFichier']))
+//			$content = json_encode($this->addWithApiManager());
+//		else
+//			$content = $this->postFile();
+		
+		//Add a text as HTML media to an item
+//		$content= json_encode($this->addHtmlMediaTo("Voilà mon texte !", 'mediaPrivé', 342));
+		
+		//Launch the import algorithm
+		$total = $this->addAction();
+		$content = "$total entrées semblent avoir été importées avec succès.";
 		
 		return new ViewModel([
 			'content' => $content
 		]);
     }
+
+	private function getValuesFromAline($item, $subItem=NULL, $orderBy='id') {
+		switch ($item){
+			case 'archive':
+				switch($subItem) {
+					case 'adresse':
+						$sql="SELECT address, city, nation FROM archives ORDER BY $orderBy ASC";
+						break;
+					case 'base':
+						$sql="SELECT name, url, nt FROM archives ORDER BY $orderBy ASC";
+						break;
+					default:
+						$sql="SELECT * FROM archives ORDER BY $orderBy ASC";
+				}
+		}
+		$statement=$this->pdo->query($sql);
+		if($statement)
+			$rows=$statement->fetchAll(\PDO::FETCH_ASSOC);
+		else
+			throw new \Exception(print_r($this->pdo->errorInfo()), true);
+		
+		return $rows;
+	}
+
+	/**
+	 * Ajoute dans $properties les propriétés de $schema associées aux valeurs
+	 * de $values.
+	 * @param array $properties Tableau de propriétés à compléter.
+	 * @param type $schemas
+	 * @param type $values
+	 */
+	private function addPropertiesToItem(array &$properties, $schemas, $values) {
+		if( is_null($values) ) {
+			$properties=NULL;
+			return;
+		}
+		foreach ($schemas as $term => $schema) { //Pour chaque propriété du schéma
+			$data=$schema;
+			switch ($data['type']){
+				case 'uri':
+					$data['@id']=$values[$schema['valueColumn']];
+					break;
+				
+				case 'resource':
+					$data['value_resource_id']=$values[$schema['valueItem']];
+					break;
+				
+				default : //'literal' le + souvent
+					$data['@value']= isset($schema['valueColumn'])
+						? $values[$schema['valueColumn']]
+						: "Adresse : ".substr($values['address'], 0, 40);
+			}
+			unset($data['valueColumn']);
+			
+			$properties[$term]=[$data];
+		}
+		/*
+		 * Objectif :
+		[
+			"type"=> "literal",
+			"property_id"=> ':propId',
+			"@value"=> $values[''],
+		]
+		 * 
+		 * Schema :
+		'locn:postName' => [
+			'type' => 'literal',
+			'property_id' => '?',
+			'valueColumn' => 'city'
+		]
+		 */
+	}
+
+	/**
+	 * Récupère les property_id réelles et les ajoute au schéma donné.
+	 * @param array $itemSchema Tableau associant à chaque terme les
+	 * caractéristiques de sa définition.
+	 */
+	private function setSchemaPropertyIds(array &$itemSchema) {
+		foreach($itemSchema as $term => &$propertySchema)
+			$propertySchema['property_id']= $this->api
+				->search('properties', ['term'=>$term])->getContent()[0]
+				->id();
+	}
+
+	/**
+	 * Récupère l’Id de la classe demandée et retourne un tableau JSON-LD
+	 * compatible avec cet Id.
+	 * @param string $term classe, avec le préfixe du vocabulaire.
+	 * @return array Tableau JSON-LD compatible définissant la ResourceClass.
+	 */
+	private function getResourceClassSchema(string $term) {
+		$id = $this->api->search('resource_classes', ['term'=>$term])
+				->getContent()[0]->id();
+		return [
+			'o:id' => $id
+		];
+	}
+	
+	/**
+	 * Récupère l’Id du modèle demandé et retourne un tableau JSON-LD
+	 * compatible avec cet Id.
+	 * @param string $label Intitulé du modèle d’item.
+	 * @return array Tableau JSON-LD compatible définissant la ResourceClass.
+	 */
+	private function getResourceTemplateSchema(string $label) {
+		$id = $this->api->search('resource_templates', ['label'=>$label])
+				->getContent()[0]->id();
+		return [
+			'o:id' => $id
+		];
+	}
+
+	/**
+	 * Passe à NULL les éléments de $valueRows qui, pour toutes les colonnes
+	 * présentes dans $schema, sont vides.
+	 * @param type $valueRows
+	 * @param type $schema
+	 */
+	private function eliminateUnusefullValues(&$valueRows, $schema) {
+		foreach ($valueRows as &$row){
+			foreach($schema as $term => $propertySchema){
+				if( isset($propertySchema['valueColumn']) 
+						&& isset($row[$propertySchema['valueColumn']]) )
+				{
+					if( !empty($row[$propertySchema['valueColumn']]) ){
+						
+						continue 2; //On passe à la ligne suivante
+					}
+				}
+			}
+			$row=NULL;
+		}
+	}
+
+	/**
+	 * Ajoute au JSON-LD le contenu de $html comme média s’il n’est pas vide.
+	 * @param array $properties Tableau de propriétés à compléter.
+	 * @param type $text Texte à ajouter comme média.
+	 */
+	private function addHiddenNotesToItem(&$properties, $text) {
+		if(empty($text)) return;
+		
+		$properties['o:media']=[[
+			"o:ingester" => "html",
+			"o:is_public" => false,
+			"html" => nl2br(htmlspecialchars($text)),
+			"titre" => [[
+				"type" => "literal",
+				'property_id' => 1,
+				'@value' => 'Remarques',
+			]]
+		]];
+	}
+
 }

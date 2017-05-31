@@ -14,7 +14,8 @@ class ListControllerFactory implements FactoryInterface{
     public function __invoke(ContainerInterface $serviceLocator, $requestedName, array $options = null) {
         //$mediaIngesterManager = $serviceLocator->get('Omeka\MediaIngesterManager');
         $apiManager = $serviceLocator->get('Omeka\ApiManager');
-        $config = $serviceLocator->get('Config');
+        
+		$pdo=new \PDO('mysql:dbname=aline;host=localhost','omeka','omeka');
         
 		$adapterManager= $serviceLocator->get('Omeka\ApiAdapterManager');
 		
@@ -22,7 +23,7 @@ class ListControllerFactory implements FactoryInterface{
 		$acl=$serviceLocator->get('Omeka\Acl');
 		$acl->allow(); //allow anybody to do anything anywhere
 		
-        return new ListController($config, $apiManager, $adapterManager);
+        return new ListController($pdo, $apiManager, $adapterManager);
     }
 
 }
