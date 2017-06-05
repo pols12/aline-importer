@@ -1,6 +1,13 @@
 <?php
 
-$archives=[
+namespace TestM\Controller;
+
+/**
+ *
+ * @author pols12
+ */
+interface Schemas {
+const ARCHIVES=[
 	'Adresse' => [
 		'resource_class' => 'locn:Address', //classes, avec préfixe
 		'resource_template' => 'Adresse', //Labels
@@ -22,10 +29,13 @@ $archives=[
 		],
 	],
 	'Lieu d’archives' => [
-		'resource_classe' => 'dcterms:Location',
+		'resource_class' => 'dcterms:Location',
 		'resource_template' => 'Lieu d’archives',
 		'item_set' => 'Lieux d’archives',
 		'persist_column' => 'archiveOId',
+		'medias' => [
+			'privateNotesColumn' => 'nt', //Colonne contenant les notes et remarques privées
+		],
 		'propertySchemas'=> [
 			'dcterms:title'=>[
 				'type' => 'literal',
@@ -34,7 +44,7 @@ $archives=[
 				'type' => 'resource',
 				//La nom de la colonne contenant les Ids des items est
 				// est contenu dans 'foreignTable'['schemaIndex']['persist_column']
-				'foreignTable' => &$archives, //Table contenant les items schemaIndex
+				'foreignTable' => 'archives', //Table contenant les items schemaIndex
 				'schemaIndex' => 'Adresse', //index du schéma des items
 				
 				//Si cette table et foreignTable ne sont pas la même table
@@ -46,15 +56,15 @@ $archives=[
 		]
 	]
 ];
-$chps=[
+const CHPS=[
 	'Lettre' => [ //À RENSEIGNER
-		'resource_classe' => 'bibo:Letter',
+		'resource_class' => 'bibo:Letter',
 		'resource_template' => 'Lettre',
 		'item_set' => 'Correspondance',
 		'persist_column' => '',
 		'medias' => [
 			'images' =>[],
-			'notes'
+			'privateNotesColumn' => 'nt', //
 		],
 		'propertySchemas'=> [
 			'dcterms:title'=>[
@@ -177,7 +187,7 @@ $chps=[
 		]
 	],
 	'Varia' => [ //À RENSEIGNER
-		'resource_classe' => 'dcterms:Location',
+		'resource_class' => 'dcterms:Location',
 		'resource_template' => 'Lieu d’archives',
 		'item_set' => 'Lieux d’archives',
 		'persist_column' => 'archiveOId',
@@ -197,3 +207,4 @@ $chps=[
 		]
 	]
 ];
+}

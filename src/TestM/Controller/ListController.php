@@ -5,12 +5,10 @@ namespace TestM\Controller;
 use Zend\Mvc\Controller\AbstractActionController;
 use Zend\View\Model\ViewModel;
 use Omeka\Api\Representation\ItemRepresentation;
-use Omeka\Entity\Item;
-use Omeka\Entity\Value;
+use Omeka\Api\Representation\ResourceReference;
 //use TestM\Job\Insert;
-//Job\Insert;
 
-class ListController extends AbstractActionController {
+class ListController extends AbstractActionController implements Schemas {
     
 	/* @var $pdo \PDO */
     protected $pdo;
@@ -26,7 +24,7 @@ class ListController extends AbstractActionController {
 		$this->adapterManager = $adapterManager;
     }
 	
-	public function postFile() {
+	private function postFile() {
 		$data = [];
 		$data['monFichier'] = new \CURLFile(__DIR__ . '/test.txt','text/plain','nomDuFichierSurLeServeur');
 		
@@ -72,7 +70,7 @@ class ListController extends AbstractActionController {
      * Add a media to an existing item uploading a file using ApiManager.
      * @param int $itemId Id of item which will have the media attached.
      */
-    private function uploadWithApiManager($itemId) {
+    private function attachMedia($itemId) {
 		$fileIndex=0;
 
 		$data=[
@@ -89,14 +87,75 @@ class ListController extends AbstractActionController {
 	}
 	
     /**
-     * Insert an Item in DB.
+     * Importe la table `archives` d’Aline dans Omeka.
      * @return ItemRepresentation
      */
-    public function addAction() {
+    private function import(string $table) {
+		if(! defined('self::'.strtoupper($table)) )
+			throw new \Exception("La table `$table` n’a pas de schéma défini.");
+		
+		$tableSchema=constant('self::'.strtoupper($table));
+		
+		foreach ($tableSchema as $itemSchema) {
+			$valueRows = $this->getCleanedRows($table, $itemSchema['propertySchemas']);
+			
+			//Définit la classe, le modèle et la collection
+			$genericData = $this->getGenericData($itemSchema);
+			
+			//Prepare schema
+			$this->setSchemaPropertyIds($itemSchema['propertySchemas']);
+			
+			//On traite les jointures
+			$this->setLinkedItemIds($valueRows, $itemSchema['propertySchemas'], $table);
+			
+			//On récupères les propriétés
+			$allItemProperties=[];
+			foreach ($valueRows as $row) {//Pour chaque entrée dans Aline
+				//Nouvel élément pour contenir toutes les propriétés de l’entrée Aline
+//				$allItemProperties[]=[];
+				
+				//On récupère la référence de ce nouvel élément
+//				$itemProperties=&$allItemProperties[count($allItemProperties)-1];
+				
+				//Et on y ajoute les propriétés
+				$allItemProperties[] = NULL===$row ? NULL
+						: array_merge(
+							$this->hydrateProperties($itemSchema['propertySchemas'], $row),
+							$this->hydrateMedias($itemSchema, $row)
+						);
+				
+				//Enfin, on y ajoute les notes privées comme média
+//				$this->hydrateMedias($itemProperties, $itemSchema['medias'], $row);
+			}
+			
+			//Et on fusionne le tout pour remplir $itemDataList
+			$itemDataList = []; //Tableau indexant les tableaux JSON-LD des items
+			foreach ($valueRows as $rowNumber => $row){
+				$properties = $allItemProperties[$rowNumber];
+				if( !is_null($properties) )
+					$itemDataList[$row['id']] = array_merge($genericData, $properties);
+			}
+			
+			//Tableau associant aux clés de $itemDataList les ResourceReference des items créés
+			$itemReferences=$this->api->batchCreate('items', $itemDataList)->getContent();
+			
+			//On stocke dans Aline les Ids des items que l’on vient de créer.
+			$this->persistIds($itemReferences, $table,
+					$itemSchema['persist_column'], $itemSchema['item_set']);
+		}
+		
+		return count($itemReferences);
+    }
+	
+    /**
+     * Importe la table `archives` d’Aline dans Omeka.
+     * @return ItemRepresentation
+     */
+    private function importArchives() {
 		include 'itemSchemas.php';
 		$alineValueRows=$this->getValuesFromAline('archive','tout');
-		$this->eliminateUnusefullValues($alineValueRows, $addressPropertySchema);
-		$this->eliminateUnusefullValues($alineValueRows, $archivePropertySchema);
+		$this->getCleanedRows($alineValueRows, $addressPropertySchema);
+		$this->getCleanedRows($alineValueRows, $archivePropertySchema);
 		
 		//On s’occupe d’abord des adresses
 		
@@ -116,7 +175,7 @@ class ListController extends AbstractActionController {
 		foreach ($alineValueRows as $row) {//Pour chaque entrée dans Aline
 			$allAddressItemProperties[]=[];
 			$addressItemProperties=&$allAddressItemProperties[count($allAddressItemProperties)-1];
-			$this->addPropertiesToItem($addressItemProperties, $addressPropertySchema, $row);
+			$this->hydrateProperties($addressItemProperties, $addressPropertySchema, $row);
 		}
 		
 		//Et on fusionne le tout pour remplir $itemDataList
@@ -157,10 +216,10 @@ class ListController extends AbstractActionController {
 			$archiveItemProperties=&$allArchiveItemProperties[count($allArchiveItemProperties)-1];
 			
 			//Et on y ajoute les propriétés
-			$this->addPropertiesToItem($archiveItemProperties, $archivePropertySchema, $row);
+			$this->hydrateProperties($archiveItemProperties, $archivePropertySchema, $row);
 			
 			//Enfin, on y ajoute les notes cachées comme média
-			$this->addHiddenNotesToItem($archiveItemProperties, $row['nt']);
+			$this->hydrateMedias($archiveItemProperties, $row['nt']);
 		}
 		
 		//Et on fusionne le tout pour remplir $itemDataList
@@ -206,7 +265,7 @@ class ListController extends AbstractActionController {
 	/**
      * Insert an item using ApiManager.
      */
-    private function addWithApiManager() {
+    private function insert() {
 		$fileIndex=0;
 		$data=[
 			"o:resource_class"=>["o:id"=>40],
@@ -262,72 +321,54 @@ class ListController extends AbstractActionController {
      * Get an item using ApiManager.
      * @param int $idItem
      */
-    private function affWithApiManager(int $idItem) {
-//        // Compose the request object
-//        $request = new Request(Request::READ, 'item');
-//        $request->setId(100);
-//        // Execute the request
-
-//        $response = $apiManager->execute($request);
-//        // Get the representation
-//        $item = $response->getContent();
-		
-        // The above could be written more concisely (recommended usage)
+    private function display(int $idItem) {
 		/* @var $item ItemRepresentation */
 		$item = $this->api->read('items', $idItem)->getContent();
 		
 		return json_encode($item);
     }
+	
     public function affAction() {
-        
-        //Insert an item using API
-        //$item=json_decode(file_get_contents(__DIR__ . '/../../../assets/item.json'), true);
-        //$this->insert($item);
-        
-        //Display an item using EntityManager
-//		$content = $this->affWithApiManager(8);
+        //Display an item
+//		$content = $this->display(8);
 		
-		//Insert an item using ApiManager
-//		$content=json_encode($this->addWithApiManager());
+		//Insert an item
+//		$content=json_encode($this->insert());
 		
-		//Upload a file as Media using ApiManager
+		//Upload a file as Media
 //		if(isset($_FILES['monFichier']))
-//			$content = json_encode($this->uploadWithApiManager(38));
+//			$content = json_encode($this->attachMedia(38));
 //		else
 //			$content = $this->postFile();
 		
 		//Create an item and attach a newly uploaded media in the same time
 //		if(isset($_FILES['monFichier']))
-//			$content = json_encode($this->addWithApiManager());
+//			$content = json_encode($this->insert());
 //		else
 //			$content = $this->postFile();
 		
 		//Add a text as HTML media to an item
 //		$content= json_encode($this->addHtmlMediaTo("Voilà mon texte !", 'mediaPrivé', 342));
 		
-		//Launch the import algorithm
-		$total = $this->addAction();
-		$content = "$total entrées semblent avoir été importées avec succès.";
+		//Launch the specific archives table import algorithm
+//		$total = $this->importArchives();
+//		$content = "$total entrées semblent avoir été importées avec succès.";
+		
+		//Launch the generic import
+		$this->import("archives");
 		
 		return new ViewModel([
 			'content' => $content
 		]);
     }
 
-	private function getValuesFromAline($item, $subItem=NULL, $orderBy='id') {
-		switch ($item){
-			case 'archive':
-				switch($subItem) {
-					case 'adresse':
-						$sql="SELECT address, city, nation FROM archives ORDER BY $orderBy ASC";
-						break;
-					case 'base':
-						$sql="SELECT name, url, nt FROM archives ORDER BY $orderBy ASC";
-						break;
-					default:
-						$sql="SELECT * FROM archives ORDER BY $orderBy ASC";
-				}
-		}
+	private function getValuesFromAline($table, $subItem=NULL, $orderBy='id') {
+//		switch ($table){
+//			case 'archives':
+//				$sql="SELECT * FROM archives ORDER BY $orderBy ASC";
+//				break;
+//		}
+		$sql="SELECT * FROM $table ORDER BY $orderBy ASC";
 		$statement=$this->pdo->query($sql);
 		if($statement)
 			$rows=$statement->fetchAll(\PDO::FETCH_ASSOC);
@@ -341,14 +382,15 @@ class ListController extends AbstractActionController {
 	 * Ajoute dans $properties les propriétés de $schema associées aux valeurs
 	 * de $values.
 	 * @param array $properties Tableau de propriétés à compléter.
-	 * @param type $schemas
-	 * @param type $values
+	 * @param array $schemas
+	 * @param array $values
 	 */
-	private function addPropertiesToItem(array &$properties, $schemas, $values) {
-		if( is_null($values) ) {
-			$properties=NULL;
-			return;
-		}
+	private function hydrateProperties(array $schemas, array $values) {
+//		if( is_null($values) ) {
+//			$properties=NULL;
+//			return;
+//		}
+		$properties=[];
 		foreach ($schemas as $term => $schema) { //Pour chaque propriété du schéma
 			$data=$schema;
 			switch ($data['type']){
@@ -357,59 +399,64 @@ class ListController extends AbstractActionController {
 					break;
 				
 				case 'resource':
-					$data['value_resource_id']=$values[$schema['valueItem']];
+					$itemIdColumn=constant('self::'.strtoupper($schema['foreignTable']))
+						[$schema['schemaIndex']] ['persist_column'];
+					$data['value_resource_id']=$values[$itemIdColumn];
 					break;
 				
 				default : //'literal' le + souvent
 					$data['@value']= isset($schema['valueColumn'])
 						? $values[$schema['valueColumn']]
-						: "Adresse : ".substr($values['address'], 0, 40);
+						: substr($values['address'], 0, 40);
 			}
 			unset($data['valueColumn']);
 			
 			$properties[$term]=[$data];
 		}
-		/*
-		 * Objectif :
-		[
-			"type"=> "literal",
-			"property_id"=> ':propId',
-			"@value"=> $values[''],
-		]
-		 * 
-		 * Schema :
-		'locn:postName' => [
-			'type' => 'literal',
-			'property_id' => '?',
-			'valueColumn' => 'city'
-		]
-		 */
+		return $properties;
 	}
 
 	/**
 	 * Récupère les property_id réelles et les ajoute au schéma donné.
-	 * @param array $itemSchema Tableau associant à chaque terme les
+	 * @param array $propertySchemas Tableau associant à chaque terme les
 	 * caractéristiques de sa définition.
 	 */
-	private function setSchemaPropertyIds(array &$itemSchema) {
-		foreach($itemSchema as $term => &$propertySchema)
+	private function setSchemaPropertyIds(array &$propertySchemas) {
+		foreach($propertySchemas as $term => &$propertySchema)
 			$propertySchema['property_id']= $this->api
 				->search('properties', ['term'=>$term])->getContent()[0]
 				->id();
 	}
 
 	/**
-	 * Récupère l’Id de la classe demandée et retourne un tableau JSON-LD
-	 * compatible avec cet Id.
-	 * @param string $term classe, avec le préfixe du vocabulaire.
-	 * @return array Tableau JSON-LD compatible définissant la ResourceClass.
+	 * Récupère l’ensemble des tableaux JSON-LD définissant la classe, le modèle
+	 * et la collection.
+	 * @param array $itemSchema 
+	 * @return array Liste de tableaux JSON-LD-compatible définissant
+	 * la ResourceClass, le ResourceTemplate et l’ItemSet.
 	 */
-	private function getResourceClassSchema(string $term) {
-		$id = $this->api->search('resource_classes', ['term'=>$term])
+	private function getGenericData(array $itemSchema) {
+		$genericData=[];
+		
+		//Resource class
+		$classId = $this->api->search('resource_classes', ['term'=>$itemSchema['resource_class']])
 				->getContent()[0]->id();
-		return [
-			'o:id' => $id
-		];
+		$genericData['o:resource_class'] =[ 'o:id' => $classId ];
+		
+		//Resource template
+		$templateId = $this->api->search('resource_templates', ['label'=>$itemSchema['resource_template']])
+				->getContent()[0]->id();
+		$genericData['o:resource_template'] = [ 'o:id' => $templateId ];
+		
+		//Item set
+		$setId = $this->api->search( 'item_sets',
+					['property'=>
+						[[ 'eq' => [$itemSchema['item_set']] ]]
+					]
+				)->getContent()[0]->id();
+		$genericData['o:item_set'] = [[ 'o:id' => $setId ]]; //Double tableau car il peut y avoir plusieurs item set
+		
+		return $genericData;
 	}
 	
 	/**
@@ -418,9 +465,12 @@ class ListController extends AbstractActionController {
 	 * @param string $label Intitulé du modèle d’item.
 	 * @return array Tableau JSON-LD compatible définissant la ResourceClass.
 	 */
-	private function getResourceTemplateSchema(string $label) {
+	private function getResourceTemplateSchema(string $tableSchema, $key) {
+		$label=$tableSchema['resource_templates'][$key];
+		
 		$id = $this->api->search('resource_templates', ['label'=>$label])
 				->getContent()[0]->id();
+		
 		return [
 			'o:id' => $id
 		];
@@ -429,10 +479,13 @@ class ListController extends AbstractActionController {
 	/**
 	 * Passe à NULL les éléments de $valueRows qui, pour toutes les colonnes
 	 * présentes dans $schema, sont vides.
-	 * @param type $valueRows
-	 * @param type $schema
+	 * @param array $valueRows
+	 * @param array $schema
+	 * @return array Lignes en entrées moins celles sans informations.
 	 */
-	private function eliminateUnusefullValues(&$valueRows, $schema) {
+	private function getCleanedRows(string $table, array $schema) {
+		$valueRows=$this->getValuesFromAline($table);
+		
 		foreach ($valueRows as &$row){
 			foreach($schema as $term => $propertySchema){
 				if( isset($propertySchema['valueColumn']) 
@@ -446,26 +499,125 @@ class ListController extends AbstractActionController {
 			}
 			$row=NULL;
 		}
+		return $valueRows;
 	}
 
 	/**
-	 * Ajoute au JSON-LD le contenu de $html comme média s’il n’est pas vide.
+	 * Récupère depuis le schéma la colonne des notes cachées et l’ajoute au
+	 * JSON-LD comme média s’il existe et n’est pas vide.
 	 * @param array $properties Tableau de propriétés à compléter.
-	 * @param type $text Texte à ajouter comme média.
+	 * @param array $mediaSchema Schéma des médias de l’item
+	 * @param array $values Valeurs de la ligne de données.
 	 */
-	private function addHiddenNotesToItem(&$properties, $text) {
-		if(empty($text)) return;
+	private function hydrateMedias(array $itemSchema, array $values) {
+		if(!isset($itemSchema['medias'])) return [];
+		$mediaSchema=$itemSchema['medias'];
 		
-		$properties['o:media']=[[
-			"o:ingester" => "html",
-			"o:is_public" => false,
-			"html" => nl2br(htmlspecialchars($text)),
-			"titre" => [[
-				"type" => "literal",
-				'property_id' => 1,
-				'@value' => 'Remarques',
+		if(!isset($mediaSchema['privateNotesColumn'])) return [];
+		
+		$text= $values[$mediaSchema['privateNotesColumn']];
+		
+		if(empty($text)) return [];
+		
+		return ['o:media'=>
+			[[
+				"o:ingester" => "html",
+				"o:is_public" => false,
+				"html" => nl2br(htmlspecialchars($text)),
+				"titre" => [[
+					"type" => "literal",
+					'property_id' => 1,
+					'@value' => 'Remarques',
+				]]
 			]]
-		]];
+		];
+	}
+
+	/**
+	 * Sauvegarde les Ids des ResourcesReference données.
+	 * @param ResourceReference[] $itemReferences
+	 * @param string $table
+	 * @param string|null $column Colonne de la BDD qui contiendra les ids des items à mémoriser
+	 */
+	private function persistIds(array $itemReferences, string $table, $column, string $label) {
+		if( is_null($column) )
+			return; //Il n’est pas nécessaire de mémoriser les Ids de ces items
+		
+		$this->createColumnIfNotExist($table, $column, $label);
+		
+		foreach ($itemReferences as $key => $item) {
+			$sql="UPDATE `$table` SET `$column`='{$item->id()}' WHERE id='$key'";
+			
+			if(false === $this->pdo->exec($sql))
+				throw new Exception(print_r($this->pdo->errorInfo()), true);
+		}
+	}
+
+	/**
+	 * Vérifie si la colonne donnée existe dans la table donnée et l’ajoute
+	 * si ce n’est pas le cas.
+	 * @param string $table Table dans laquelle doit être la colonne.
+	 * @param string $column Nom de la colonne dont on souhaite qu’elle existe.
+	 * @param string $label Intitulé de l’item pour lequel la colonne va stocker
+	 * les Ids.
+	 * @return boolean Vrai si une table a été créé, faux sinon.
+	 * @throws \Exception Problème de connexion avec PDO.
+	 */
+	private function createColumnIfNotExist(string $table, string $column, string $label) {
+		$sqlTest="SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+				WHERE TABLE_SCHEMA = 'aline' 
+				AND TABLE_NAME = '$table'
+				AND COLUMN_NAME = '$column'";
+		$statementTest=$this->pdo->query($sqlTest);
+		
+		if(!$statementTest)
+			throw new \Exception(print_r($this->pdo->errorInfo()), true);
+		
+		if(current($statementTest->fetch()) > 0) //Si la colonne existe déjà
+			return false;
+		
+		//La colonne n’existe pas donc on la crée 
+		$sqlAdd="ALTER TABLE `$table` ADD `$column` INT NULL COMMENT 'id des items $label dans Omeka'";
+		$statementAdd=$this->pdo->query($sqlAdd);
+		if(!$statementAdd)
+			throw new \Exception(print_r($this->pdo->errorInfo()), true);
+		
+		return true;
+	}
+
+	/**
+	 * On ajoute une colonne à $rows qui contiendra les Ids des items pour
+	 * chaque propriété qui lie un autre item comme valeur.
+	 * Cette fonction ne rajoute pas de colonne si les items proviennent de la
+	 * même table car ce n’est pas nécessaire.
+	 * @param array $rows Les données auxquelles on doit ajouter des colonnes.
+	 * @param array $propertySchemas
+	 * @param string $rowsTable Nom de la table d’où proviennent $rows.
+	 */
+	private function setLinkedItemIds(array &$rows, array $propertySchemas, string $rowsTable) {
+		foreach ($propertySchemas as $term => $schema) { //Pour chaque propriété
+			if( 'resource' === $schema['type'] //si la valeur est un autre item
+					&& ($foreignTable = $schema['foreignTable']) !== $rowsTable ) //et que l’item ne vient pas de la même table
+			{
+				//Nom de la colonne contenant les Ids.
+				$itemIdColumn=constant('self::'.strtoupper($foreignTable))
+						[$schema['schemaIndex']] ['persist_column'];
+
+				$sql="SELECT * FROM $foreignTable ORDER BY id ASC";
+				$statement = $this->pdo->query($sql);
+				$foreignRows = $statement
+						->fetchAll(\PDO::FETCH_GROUP | \PDO::FETCH_UNIQUE | \PDO::FETCH_ASSOC);
+
+
+				foreach ($rows as &$row) {
+					//On récupère la ligne étrangère correspondant à notre $row
+					$foreignRow = $foreignRows[ $row[ $schema['foreignKeyColumn'] ] ];
+
+					//On crée la nouvelle colonne, copie de celle de la table étrangère
+					$row[$itemIdColumn] = $foreignRow [$itemIdColumn];
+				}
+			}
+		}
 	}
 
 }
