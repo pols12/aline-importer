@@ -5,8 +5,7 @@ namespace TestM\Controller;
 use Zend\Mvc\Controller\AbstractActionController;
 use Zend\View\Model\ViewModel;
 use Omeka\Api\Representation\ItemRepresentation;
-use Omeka\Api\Representation\ResourceReference;
-//use TestM\Job\Insert;
+use TestM\Job\Import;
 
 class ListController extends AbstractActionController implements Schemas {
     
@@ -16,9 +15,9 @@ class ListController extends AbstractActionController implements Schemas {
 	protected $api;
 	/* @var $adapterManager \Omeka\Api\Adapter\Manager */
     protected $adapterManager;
-	
-    
-    public function __construct(\PDO $pdo, $api, $adapterManager) {
+
+
+	public function __construct(\PDO $pdo, $api, $adapterManager) {
 		$this->pdo = $pdo;
 		$this->api = $api;
 		$this->adapterManager = $adapterManager;
@@ -85,67 +84,6 @@ class ListController extends AbstractActionController implements Schemas {
 		];
 		return $this->api->create('media', $data, $fileData)->getContent();
 	}
-	
-    /**
-     * Importe la table `archives` d’Aline dans Omeka.
-     * @return ItemRepresentation
-     */
-    private function import(string $table) {
-		if(! defined('self::'.strtoupper($table)) )
-			throw new \Exception("La table `$table` n’a pas de schéma défini.");
-		
-		$tableSchema=constant('self::'.strtoupper($table));
-		
-		foreach ($tableSchema as $itemSchema) {
-			$valueRows = $this->getCleanedRows($table, $itemSchema['propertySchemas']);
-			
-			//Définit la classe, le modèle et la collection
-			$genericData = $this->getGenericData($itemSchema);
-			
-			//Prepare schema
-			$this->setSchemaPropertyIds($itemSchema['propertySchemas']);
-			
-			//On traite les jointures
-			$this->setLinkedItemIds($valueRows, $itemSchema['propertySchemas'], $table);
-			
-			//On récupères les propriétés
-			$allItemProperties=[];
-			foreach ($valueRows as $row) {//Pour chaque entrée dans Aline
-				//Nouvel élément pour contenir toutes les propriétés de l’entrée Aline
-//				$allItemProperties[]=[];
-				
-				//On récupère la référence de ce nouvel élément
-//				$itemProperties=&$allItemProperties[count($allItemProperties)-1];
-				
-				//Et on y ajoute les propriétés
-				$allItemProperties[] = NULL===$row ? NULL
-						: array_merge(
-							$this->hydrateProperties($itemSchema['propertySchemas'], $row),
-							$this->hydrateMedias($itemSchema, $row)
-						);
-				
-				//Enfin, on y ajoute les notes privées comme média
-//				$this->hydrateMedias($itemProperties, $itemSchema['medias'], $row);
-			}
-			
-			//Et on fusionne le tout pour remplir $itemDataList
-			$itemDataList = []; //Tableau indexant les tableaux JSON-LD des items
-			foreach ($valueRows as $rowNumber => $row){
-				$properties = $allItemProperties[$rowNumber];
-				if( !is_null($properties) )
-					$itemDataList[$row['id']] = array_merge($genericData, $properties);
-			}
-			
-			//Tableau associant aux clés de $itemDataList les ResourceReference des items créés
-			$itemReferences=$this->api->batchCreate('items', $itemDataList)->getContent();
-			
-			//On stocke dans Aline les Ids des items que l’on vient de créer.
-			$this->persistIds($itemReferences, $table,
-					$itemSchema['persist_column'], $itemSchema['item_set']);
-		}
-		
-		return count($itemReferences);
-    }
 	
     /**
      * Importe la table `archives` d’Aline dans Omeka.
@@ -355,19 +293,15 @@ class ListController extends AbstractActionController implements Schemas {
 //		$content = "$total entrées semblent avoir été importées avec succès.";
 		
 		//Launch the generic import
-		$this->import("archives");
-		
+		/* @var $job \Omeka\Entity\Job */
+		$job = $this->jobDispatcher()->dispatch(Import::class, ['table'=>'archives']);
+		$content = is_string($job->getLog()) ? $job->getLog() : 'Import réalisé' ;
 		return new ViewModel([
 			'content' => $content
 		]);
     }
 
 	private function getValuesFromAline($table, $subItem=NULL, $orderBy='id') {
-//		switch ($table){
-//			case 'archives':
-//				$sql="SELECT * FROM archives ORDER BY $orderBy ASC";
-//				break;
-//		}
 		$sql="SELECT * FROM $table ORDER BY $orderBy ASC";
 		$statement=$this->pdo->query($sql);
 		if($statement)
@@ -386,10 +320,6 @@ class ListController extends AbstractActionController implements Schemas {
 	 * @param array $values
 	 */
 	private function hydrateProperties(array $schemas, array $values) {
-//		if( is_null($values) ) {
-//			$properties=NULL;
-//			return;
-//		}
 		$properties=[];
 		foreach ($schemas as $term => $schema) { //Pour chaque propriété du schéma
 			$data=$schema;
@@ -531,93 +461,6 @@ class ListController extends AbstractActionController implements Schemas {
 				]]
 			]]
 		];
-	}
-
-	/**
-	 * Sauvegarde les Ids des ResourcesReference données.
-	 * @param ResourceReference[] $itemReferences
-	 * @param string $table
-	 * @param string|null $column Colonne de la BDD qui contiendra les ids des items à mémoriser
-	 */
-	private function persistIds(array $itemReferences, string $table, $column, string $label) {
-		if( is_null($column) )
-			return; //Il n’est pas nécessaire de mémoriser les Ids de ces items
-		
-		$this->createColumnIfNotExist($table, $column, $label);
-		
-		foreach ($itemReferences as $key => $item) {
-			$sql="UPDATE `$table` SET `$column`='{$item->id()}' WHERE id='$key'";
-			
-			if(false === $this->pdo->exec($sql))
-				throw new Exception(print_r($this->pdo->errorInfo()), true);
-		}
-	}
-
-	/**
-	 * Vérifie si la colonne donnée existe dans la table donnée et l’ajoute
-	 * si ce n’est pas le cas.
-	 * @param string $table Table dans laquelle doit être la colonne.
-	 * @param string $column Nom de la colonne dont on souhaite qu’elle existe.
-	 * @param string $label Intitulé de l’item pour lequel la colonne va stocker
-	 * les Ids.
-	 * @return boolean Vrai si une table a été créé, faux sinon.
-	 * @throws \Exception Problème de connexion avec PDO.
-	 */
-	private function createColumnIfNotExist(string $table, string $column, string $label) {
-		$sqlTest="SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-				WHERE TABLE_SCHEMA = 'aline' 
-				AND TABLE_NAME = '$table'
-				AND COLUMN_NAME = '$column'";
-		$statementTest=$this->pdo->query($sqlTest);
-		
-		if(!$statementTest)
-			throw new \Exception(print_r($this->pdo->errorInfo()), true);
-		
-		if(current($statementTest->fetch()) > 0) //Si la colonne existe déjà
-			return false;
-		
-		//La colonne n’existe pas donc on la crée 
-		$sqlAdd="ALTER TABLE `$table` ADD `$column` INT NULL COMMENT 'id des items $label dans Omeka'";
-		$statementAdd=$this->pdo->query($sqlAdd);
-		if(!$statementAdd)
-			throw new \Exception(print_r($this->pdo->errorInfo()), true);
-		
-		return true;
-	}
-
-	/**
-	 * On ajoute une colonne à $rows qui contiendra les Ids des items pour
-	 * chaque propriété qui lie un autre item comme valeur.
-	 * Cette fonction ne rajoute pas de colonne si les items proviennent de la
-	 * même table car ce n’est pas nécessaire.
-	 * @param array $rows Les données auxquelles on doit ajouter des colonnes.
-	 * @param array $propertySchemas
-	 * @param string $rowsTable Nom de la table d’où proviennent $rows.
-	 */
-	private function setLinkedItemIds(array &$rows, array $propertySchemas, string $rowsTable) {
-		foreach ($propertySchemas as $term => $schema) { //Pour chaque propriété
-			if( 'resource' === $schema['type'] //si la valeur est un autre item
-					&& ($foreignTable = $schema['foreignTable']) !== $rowsTable ) //et que l’item ne vient pas de la même table
-			{
-				//Nom de la colonne contenant les Ids.
-				$itemIdColumn=constant('self::'.strtoupper($foreignTable))
-						[$schema['schemaIndex']] ['persist_column'];
-
-				$sql="SELECT * FROM $foreignTable ORDER BY id ASC";
-				$statement = $this->pdo->query($sql);
-				$foreignRows = $statement
-						->fetchAll(\PDO::FETCH_GROUP | \PDO::FETCH_UNIQUE | \PDO::FETCH_ASSOC);
-
-
-				foreach ($rows as &$row) {
-					//On récupère la ligne étrangère correspondant à notre $row
-					$foreignRow = $foreignRows[ $row[ $schema['foreignKeyColumn'] ] ];
-
-					//On crée la nouvelle colonne, copie de celle de la table étrangère
-					$row[$itemIdColumn] = $foreignRow [$itemIdColumn];
-				}
-			}
-		}
 	}
 
 }
