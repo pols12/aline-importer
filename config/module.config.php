@@ -1,5 +1,5 @@
 <?php
-namespace TestM;
+namespace AlineImporter;
 use Zend\Router\Http\Literal;
 
 return [
@@ -12,25 +12,25 @@ return [
 //// Controller //////
 	'controllers' => [
 		'factories' => [
-			Controller\ListController::class => Factory\ListControllerFactory::class,
+			Controller\ImportController::class => Factory\ImportControllerFactory::class,
 		]
 	],
 //// Router ////////
 	'router' => [
 		// Open configuration for all possible routes
 		'routes' => [
-			// Define a new route called "maroute"
-			'maroute' => [
+			// Define a new route called "importroute"
+			'importroute' => [
 				// Define the routes type to be "Zend\Mvc\Router\Http\Literal", which is basically just a string
 				'type' => Literal::class,
 				// Configure the route itself
 				'options' => [
-					// Listen to "/testm" as uri
-					'route' => '/testm',
+					// URL de la page
+					'route' => '/aline-importer',
 					// Define default controller and action to be called when this route is matched
 					'defaults' => [
-						'controller' => Controller\ListController::class,
-						'action'     => 'aff',
+						'controller' => Controller\ImportController::class,
+						'action'     => 'import',
 					]
 				]
 			]

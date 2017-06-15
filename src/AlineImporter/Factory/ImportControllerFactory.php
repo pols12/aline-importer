@@ -1,7 +1,7 @@
 <?php
-namespace TestM\Factory;
+namespace AlineImporter\Factory;
 
-use TestM\Controller\ListController;
+use AlineImporter\Controller\ImportController;
 use Interop\Container\ContainerInterface;
 use Zend\ServiceManager\Factory\FactoryInterface;
 /**
@@ -9,7 +9,7 @@ use Zend\ServiceManager\Factory\FactoryInterface;
  *
  * @author pols12
  */
-class ListControllerFactory implements FactoryInterface{
+class ImportControllerFactory implements FactoryInterface{
     
     public function __invoke(ContainerInterface $serviceLocator, $requestedName, array $options = null) {
         //$mediaIngesterManager = $serviceLocator->get('Omeka\MediaIngesterManager');
@@ -23,7 +23,7 @@ class ListControllerFactory implements FactoryInterface{
 		$acl=$serviceLocator->get('Omeka\Acl');
 		$acl->allow(); //allow anybody to do anything anywhere
 		
-        return new ListController($pdo, $apiManager, $adapterManager);
+        return new ImportController($pdo, $apiManager, $adapterManager);
     }
 
 }

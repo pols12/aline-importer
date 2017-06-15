@@ -1,13 +1,13 @@
 <?php
 
-namespace TestM\Controller;
+namespace AlineImporter\Controller;
 
 use Zend\Mvc\Controller\AbstractActionController;
 use Zend\View\Model\ViewModel;
 use Omeka\Api\Representation\ItemRepresentation;
-use TestM\Job\Import;
+use AlineImporter\Job\Import;
 
-class ListController extends AbstractActionController implements Schemas {
+class ImportController extends AbstractActionController implements Schemas {
     
 	/* @var $pdo \PDO */
     protected $pdo;
@@ -28,7 +28,7 @@ class ListController extends AbstractActionController implements Schemas {
 		$data['monFichier'] = new \CURLFile(__DIR__ . '/test.txt','text/plain','nomDuFichierSurLeServeur');
 		
 		//adding keys
-		$url="http://localhost/omeka-s/testm";
+		$url="http://localhost/omeka-s/aline-importer";
 		
 		$options=[
 			CURLOPT_RETURNTRANSFER => true,
@@ -266,7 +266,7 @@ class ListController extends AbstractActionController implements Schemas {
 		return json_encode($item);
     }
 	
-    public function affAction() {
+    public function importAction() {
         //Display an item
 //		$content = $this->display(8);
 		
@@ -294,8 +294,9 @@ class ListController extends AbstractActionController implements Schemas {
 		
 		//Launch the generic import
 		/* @var $job \Omeka\Entity\Job */
-		$job = $this->jobDispatcher()->dispatch(Import::class, ['table'=>'archives']);
-		$content = is_string($job->getLog()) ? $job->getLog() : 'Import réalisé' ;
+//		$job = $this->jobDispatcher()->dispatch(Import::class, ['table'=>'chp_author']);
+//		$content = is_string($job->getLog()) ? $job->getLog() : 'Import réalisé' ;
+		$content='Aucune action n’a été spécifiée.';
 		return new ViewModel([
 			'content' => $content
 		]);
