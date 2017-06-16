@@ -67,6 +67,27 @@ class ImportController extends AbstractActionController implements Schemas {
 	}
 	
 	/**
+     * Add a media coming from an URL to an existing item.
+     * @param string $url Contenu du media.
+	 * @param string $titre Title of media
+	 * @param int $itemId Id of item which will have the media attached.
+     */
+    private function addUrlMediaTo(string $url, string $titre, int $itemId) {
+		$data=[
+			"o:ingester" => "url",
+			"o:is_public" => true,
+			"o:item" => ["o:id" => $itemId],
+			"ingest_url" => $url,
+			"titre" => [[
+				"type" => "literal",
+				'property_id' => 1,
+				'@value' => $titre,
+			]]
+		];
+		return $this->api->create('media', $data)->getContent();
+	}
+	
+	/**
      * Add a media to an existing item uploading a file using ApiManager.
      * @param int $itemId Id of item which will have the media attached.
      */
@@ -288,6 +309,9 @@ class ImportController extends AbstractActionController implements Schemas {
 		
 		//Add a text as HTML media to an item
 //		$content= json_encode($this->addHtmlMediaTo("Voilà mon texte !", 'mediaPrivé', 342));
+
+		//Add a media using Url ingester
+		$content= json_encode($this->addUrlMediaTo("http://crouton.net/crouton.gif", 'MyFood', 8294));
 		
 		//Launch the specific archives table import algorithm
 //		$total = $this->importArchives();
@@ -297,7 +321,7 @@ class ImportController extends AbstractActionController implements Schemas {
 		/* @var $job \Omeka\Entity\Job */
 //		$job = $this->jobDispatcher()->dispatch(Import::class, ['table'=>'chp_author']);
 //		$content = is_string($job->getLog()) ? $job->getLog() : 'Import réalisé' ;
-		$content='Aucune action n’a été spécifiée.';
+//		$content='Aucune action n’a été spécifiée.';
 		return new ViewModel([
 			'content' => $content
 		]);
