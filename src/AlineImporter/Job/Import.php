@@ -215,8 +215,12 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 		$genericData['o:resource_template'] = [ 'o:id' => $templateId ];
 		
 		//Item set
-		$setId = $this->api->search( 'item_sets', ['search'=> $itemSchema['item_set'] ])
-				->getContent() [0]->id();
+		$setId = $this->api->search( 'item_sets', ['property'=> [[
+					'property' => 1, //dcterms:title
+					'type' => 'eq',
+					'text' => $itemSchema['item_set']
+				]]
+			])->getContent() [0]->id();
 		$genericData['o:item_set'] = [[ 'o:id' => $setId ]]; //Double tableau car il peut y avoir plusieurs item set
 		
 		return $genericData;
