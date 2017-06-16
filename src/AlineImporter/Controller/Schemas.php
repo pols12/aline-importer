@@ -1,6 +1,6 @@
 <?php
 
-namespace TestM\Controller;
+namespace AlineImporter\Controller;
 
 /**
  *
@@ -16,7 +16,8 @@ const ARCHIVES=[
 		'propertySchemas'=> [
 			'dcterms:title'=>[ //valeur à générer automatiquement
 				'type' => 'literal',
-				'defaultValueColumn' => 'address'],
+				'defaultValue' => 'Adresse de %s',
+				'defaultValueColumns' => ['name']],
 			'locn:fullAddress'=>[
 				'type' => 'literal',
 				'valueColumn' => 'address'],
@@ -34,7 +35,16 @@ const ARCHIVES=[
 		'item_set' => 'Lieux d’archives',
 		'persist_column' => 'archiveOId',
 		'medias' => [
-			'privateNotesColumn' => 'nt', //Colonne contenant les notes et remarques privées
+			'Notes' => [
+				'public' => false,
+				'valueColumn' => 'nt', //Colonne contenant les notes et remarques privées
+				'propertySchemas' => [
+					'dcterms:title'=>[
+						'type' => 'literal',
+						'defaultValue' => 'Remarques sur %s',
+						'defaultValueColumns' => ['name']],
+				]
+			]
 		],
 		'propertySchemas'=> [
 			'dcterms:title'=>[
@@ -55,6 +65,116 @@ const ARCHIVES=[
 				'valueColumn' => 'url'],
 		]
 	]
+];
+const CHP_AUTHOR=[
+	'Volume'=>[
+		'resource_class' => 'bibo:Book',
+		'resource_template' => 'Ouvrage',
+		'item_set' => 'Volumes de la correspondance',
+		'persist_column' => 'volumeOId',
+		'uniqueTerms' => ['bibo:volume'],
+		'dustValues' => [[NULL]],
+		'propertySchemas'=> [
+			'dcterms:title'=>[
+				'type' => 'literal',
+				'defaultValue' => 'La Correspondance entre Henri Poincaré et... – Volume %s',
+				'defaultValueColumns' => ['vol']],
+			'bibo:volume'=>[
+				'type' => 'literal',
+				'valueColumn' => 'vol'],
+		],
+	],
+	'Chapitre'=>[ //uniquement si `chapter` != 0
+		'resource_class' => 'bibo:Chapter',
+		'resource_template' => 'Chapitre',
+		'item_set' => 'Chapitres de la correspondance',
+		'persist_column' => 'chapitreOId',
+		'uniqueTerms' => ['bibo:chapter','dcterms:isPartOf'], //Terme contenant la colonne de référence pour éviter les doublons
+		'dustValues' => [['0'],['0']], //Valeurs des colonnes de uniqueTerms équivalantes à NULL
+		'propertySchemas'=> [
+			'dcterms:title'=>[
+				'type' => 'literal',
+				'valueColumn' => 'chapterhead'],
+			'bibo:chapter'=>[
+				'type' => 'literal',
+				'valueColumn' => 'chapter'],
+			'dcterms:isPartOf' => [ //volume
+				'type' => 'resource',
+				'foreignTable' => 'chp_author',
+				'schemaIndex' => 'Volume'],
+		],
+	],
+	'Pays' => [
+		'resource_class' => 'locn:Address',
+		'resource_template' => 'Adresse',
+		'item_set' => 'Adresses des correspondants',
+		'persist_column' => 'paysOId',
+		'propertySchemas'=> [
+			'dcterms:title'=>[
+				'type' => 'literal',
+				'defaultValue' => 'Adresse de %s',
+				'defaultValueColumns' => ['chapterhead']],
+			'locn:adminUnitL1' => [
+				'type' => 'literal',
+				'valueColumn' => 'nation'],
+		],
+	],
+	'Auteur'=>[
+		'resource_class' => 'foaf:Person',
+		'resource_template' => 'Correspondant',
+		'item_set' => 'Correspondants d’Henri Poincaré',
+		'persist_column' => 'auteurOId',
+		'medias' => [
+			'Biographie'=>[
+				'public' => true,
+				'valueColumn' => null,
+				'fileNameColumn' => 'texbio',
+				'propertySchemas'=> [
+					'dcterms:title' => [
+						'type' => 'literal',
+						'defaultValue' => 'Biographie de %s',
+						'defaultValueColumns' => ['chapterhead']],
+					'dcterms:language' => [
+						'type' => 'literal',
+						'valueColumn' => 'lang'],
+					'dcterms:creator' => [ //À reprendre après import pour le créer comme resource
+						'type' => 'literal',
+						'defaultValue' => 'Scott Walter',
+						'defaultValueColumns' => []],
+					],
+			],
+		],
+		'propertySchemas'=> [
+			'dcterms:title' => [
+				'type' => 'literal',
+				'valueColumn' => 'chapterhead'], //Poincaré à créer manuellement !
+			'foaf:givenName' => [
+				'type' => 'literal',
+				'split' => [',', 1], //['caractère de découpe', index du tableau]
+				'valueColumn' => 'name'],
+			'foaf:familyName' => [
+				'type' => 'literal',
+				'split' => [',', 0],
+				'valueColumn' => 'name'],
+			'dbo:viafId' => [
+				'type' => 'uri',
+				'defaultValue' => 'http://viaf.org/viaf/%s',
+				'defaultValueColumns' => ['viaf']],
+			'foaf:isPrimaryTopicOf' => [
+				'type' => 'resource',
+				'foreignTable' => 'chp_author',
+				'schemaIndex' => 'Chapitre'],
+			'locn:address' => [
+				'type' => 'resource',
+				'foreignTable' => 'chp_author',
+				'schemaIndex' => 'Pays'],
+		],
+	],
+
+
+];
+const HPPB=[
+	
 ];
 const CHPS=[
 	'Lettre' => [ //À RENSEIGNER

@@ -47,6 +47,7 @@ class ImportController extends AbstractActionController implements Schemas {
 	/**
      * Add a text as media to an existing item.
      * @param string $text Contenu du media.
+	 * @param string $titre Title of media
 	 * @param int $itemId Id of item which will have the media attached.
      */
     private function addHtmlMediaTo(string $text, string $titre, int $itemId) {
