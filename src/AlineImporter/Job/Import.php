@@ -42,6 +42,8 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 		
 		$this->logger->log(0, "Schéma de la table {$this->table} récupéré.");
 		
+		$this->prepareTable();
+		
 		//Et on lance l’importation
 		$this->import();
 	}
@@ -336,7 +338,8 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 	 * @return boolean Vrai si une table a été créé, faux sinon.
 	 * @throws \Exception Problème de connexion avec PDO.
 	 */
-	private function createColumnIfNotExist(string $column, string $label) {
+	private function createColumnIfNotExist(string $column, string $label,
+			bool $fullLabel=false, string $type='INT') {
 		$sqlTest="SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
 				WHERE TABLE_SCHEMA = 'aline' 
 				AND TABLE_NAME = '$this->table'
@@ -349,11 +352,12 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 		if(current($statementTest->fetch()) > 0) //Si la colonne existe déjà
 			return false;
 		
-		//La colonne n’existe pas donc on la crée 
-		$sqlAdd="ALTER TABLE `$this->table` ADD `$column` INT NULL COMMENT 'id des items $label dans Omeka'";
+		//La colonne n’existe pas donc on la crée
+		$comment = $fullLabel ? $label : "id des items $label dans Omeka";
+		$sqlAdd="ALTER TABLE `$this->table` ADD `$column` $type NULL COMMENT '$comment'";
 		$statementAdd=$this->pdo->query($sqlAdd);
 		if(!$statementAdd)
-			throw new \Exception(print_r($this->pdo->errorInfo()), true);
+			throw new \Exception(print_r($this->pdo->errorInfo(), true));
 		
 		return true;
 	}
@@ -427,12 +431,11 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 			: vsprintf( $schema['defaultValue'], //Sinon on génère une valeur
 					array_intersect_key($values,array_flip($schema['defaultValueColumns'])) );
 		
-		if( isset($schema['split']) ) //Si la valeur contient d’autres infos non voulues
-			$value = trim( explode
-					(
-						$schema['split'][0],
-						$value
-					) [$schema['split'][1]] );
+		if( isset($schema['split']) ){ //Si la valeur contient d’autres infos non voulues
+			$splittedValue = explode( $schema['split'][0], $value );
+			$gluedValue = implode(" ", array_intersect_key($splittedValue, array_flip($schema['split'][1])));
+			return trim($gluedValue);
+		}
 		
 		return $value;
 	}
@@ -457,5 +460,43 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 						[$propertySchema['schemaIndex']] ['persist_column'] ;
 		}
 		return $uniqueColumns;
+	}
+
+	/**
+	 * Effectue des opérations sur la table dans Aline, nécessaires avant
+	 * son importation dans Omeka S.
+	 */
+	private function prepareTable() {
+		switch ($this->table) {
+		case 'hppb':
+			//scinder la colonne a2 en a2_1 et a2_2
+			if(! ($this->createColumnIfNotExist('a2_1', 'Coauteur1', true, 'VARCHAR(250)')
+					&& $this->createColumnIfNotExist('a2_2', 'Coauteur2', true, 'VARCHAR(250)')) ) {
+				
+				$sqlSlct="SELECT id,a2 FROM `hppb`";
+				$statementSlct = $this->pdo->query($sqlSlct);
+				if(!$statementSlct) throw new \Exception(print_r($pdo->errorInfo(), true));
+				
+				$rows = $statementSlct->fetchAll(\PDO::FETCH_GROUP | \PDO::FETCH_UNIQUE| \PDO::FETCH_ASSOC) ;
+				
+				$sqlUpd="UPDATE hppb SET a2_1=:name1, a2_2=:name2 WHERE id=:id";
+				$statementUpd=$this->pdo->prepare($sqlUpd);
+				
+				foreach ($rows as $id => $row) {
+					if(empty($row['a2'])) continue;
+					
+					$names=explode(' and ',$row['a2']);
+					$name1=$names[0];
+					$name2=isset($names[1]) ? $names[1] : NULL;
+					
+					$sqlVals=[':name1' => $name1,
+						':name2' => $name2,
+						'id' => $id];
+					$this->logger->debug("id ${sqlVals['id']} prend la valeur {$sqlVals[':name1']} ");
+					$statementUpd->execute($sqlVals);
+					if(!$statementUpd) throw new \Exception(print_r($pdo->errorInfo(), true));
+				}
+			}
+		}
 	}
 }
