@@ -29,6 +29,7 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 		$this->api = $this->getServiceLocator()->get('Omeka\ApiManager');
 		//On récupère le service de journalisation
 		$this->logger = $this->getServiceLocator()->get('Omeka\Logger');
+		\Zend\Log\Logger::registerErrorHandler($this->logger);
 
 		$this->logger->info("Services initialisés. Récupération de la table...");
 		
@@ -468,35 +469,53 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 	 */
 	private function prepareTable() {
 		switch ($this->table) {
-		case 'hppb':
-			//scinder la colonne a2 en a2_1 et a2_2
-			if(! ($this->createColumnIfNotExist('a2_1', 'Coauteur1', true, 'VARCHAR(250)')
-					&& $this->createColumnIfNotExist('a2_2', 'Coauteur2', true, 'VARCHAR(250)')) ) {
+			case 'hppb':
+				$this->cutColumn('a2', 2, 'Coauteur');
+				$this->cutColumn('e2', 7, 'Rédacteur');
+		}
+	}
+
+	/**
+	 * Scinde une colonne en plusieurs colonnes, les valeurs de la colonne étant
+	 * séparés par " and ".
+	 * @param string $column Colonne à scinder
+	 * @param int $nbToCreate Nombre maximum de valeurs différentes dans $column
+	 * @param string $label Commentaire des nouvelles colonnes créées.
+	 * @throws \Exception Erreur PDO.
+	 */
+	private function cutColumn(string $column, int $nbToCreate, string $label='') {
+		for ($i = 1; $i <= $nbToCreate; $i++) {
+			$isUseful = $this->createColumnIfNotExist("{$column}_$i", $label.$i, true, 'VARCHAR(250)');
+			if(!$isUseful) return;
+		}
 				
-				$sqlSlct="SELECT id,a2 FROM `hppb`";
-				$statementSlct = $this->pdo->query($sqlSlct);
-				if(!$statementSlct) throw new \Exception(print_r($pdo->errorInfo(), true));
-				
-				$rows = $statementSlct->fetchAll(\PDO::FETCH_GROUP | \PDO::FETCH_UNIQUE| \PDO::FETCH_ASSOC) ;
-				
-				$sqlUpd="UPDATE hppb SET a2_1=:name1, a2_2=:name2 WHERE id=:id";
-				$statementUpd=$this->pdo->prepare($sqlUpd);
-				
-				foreach ($rows as $id => $row) {
-					if(empty($row['a2'])) continue;
-					
-					$names=explode(' and ',$row['a2']);
-					$name1=$names[0];
-					$name2=isset($names[1]) ? $names[1] : NULL;
-					
-					$sqlVals=[':name1' => $name1,
-						':name2' => $name2,
-						'id' => $id];
-					
-					$statementUpd->execute($sqlVals);
-					if(!$statementUpd) throw new \Exception(print_r($pdo->errorInfo(), true));
-				}
-			}
+		$sqlSlct="SELECT id,$column FROM {$this->table}";
+		$statementSlct = $this->pdo->query($sqlSlct);
+		if(!$statementSlct) throw new \Exception(print_r($pdo->errorInfo(), true));
+		
+		$rows = $statementSlct->fetchAll(\PDO::FETCH_GROUP | \PDO::FETCH_UNIQUE| \PDO::FETCH_ASSOC) ;
+		
+		$sqlUpd="UPDATE {$this->table} SET";
+		for ($i = 1; $i <= $nbToCreate; $i++)
+			$sqlUpd.=" {$column}_$i=:name$i,";
+		
+		$sqlUpd = substr($sqlUpd, 0, -1); //enlève la dernière virgule
+		$sqlUpd.=" WHERE id=:id";
+		
+		$statementUpd=$this->pdo->prepare($sqlUpd);
+		
+		foreach ($rows as $id => $row) {
+			if(empty($row[$column])) continue;
+			
+			$names=explode(' and ',$row[$column]);
+			$names = array_pad($names, $nbToCreate, NULL);
+			
+			$values=[':id' => $id];
+			for ($i = 1; $i <= $nbToCreate; $i++) 
+				$values[":name$i"] = $names[$i-1];
+			
+			$statementUpd->execute($values);
+			if(!$statementUpd) throw new \Exception(print_r($pdo->errorInfo(), true));
 		}
 	}
 }
