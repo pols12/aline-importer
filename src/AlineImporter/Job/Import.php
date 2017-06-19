@@ -30,7 +30,7 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 		//On récupère le service de journalisation
 		$this->logger = $this->getServiceLocator()->get('Omeka\Logger');
 
-		$this->logger-> log(0, "Services initialisés. Récupération de la table...");
+		$this->logger->info("Services initialisés. Récupération de la table...");
 		
 		//On récupère le nom de la table à importer depuis les arguments
 		$this->table = $this->getArg('table');
@@ -40,7 +40,7 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 		//On récupère le schéma de cette table
 		$this->tableSchema=constant('self::'.strtoupper($this->table));
 		
-		$this->logger->log(0, "Schéma de la table {$this->table} récupéré.");
+		$this->logger->info("Schéma de la table {$this->table} récupéré.");
 		
 		$this->prepareTable();
 		
@@ -57,7 +57,7 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 			//Si la configuration n’est pas défini, on passe à l’item suivant
 			if(!isset($itemSchema['item_set'])) continue;
 			
-			$this->logger->log(0,"Début de l’import des {$itemSchema['item_set']}...");
+			$this->logger->info("Début de l’import des {$itemSchema['item_set']}...");
 			
 			//si le schéma définit une colonne unique, et des valeurs poubelle, on les précise
 			$uniqueColumns = $this->getUniqueColumns($itemSchema);
@@ -67,7 +67,7 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 			$valueRows = $this->getCleanedRows($itemSchema['propertySchemas'],
 					$uniqueColumns, $dustValues);
 			
-			$this->logger->log(0, "Requête SELECT sur Aline finalisée : "
+			$this->logger->info("Requête SELECT sur Aline finalisée : "
 					.count($valueRows)." lignes récupérées.");
 			
 			//Définit la classe, le modèle et la collection
@@ -103,7 +103,7 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 			//Tableau associant aux clés de $itemDataList les ResourceReference des items créés
 			$itemReferences=$this->api->batchCreate('items', $itemDataList)->getContent();
 			
-			$this->logger->log(0,count($itemReferences)." items ont été créés.");
+			$this->logger->info(count($itemReferences)." items ont été créés.");
 			
 			//On stocke dans Aline les Ids des items que l’on vient de créer.
 			$this->persistIds($itemReferences, $itemSchema['persist_column'],
@@ -492,7 +492,7 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 					$sqlVals=[':name1' => $name1,
 						':name2' => $name2,
 						'id' => $id];
-					$this->logger->debug("id ${sqlVals['id']} prend la valeur {$sqlVals[':name1']} ");
+					
 					$statementUpd->execute($sqlVals);
 					if(!$statementUpd) throw new \Exception(print_r($pdo->errorInfo(), true));
 				}
