@@ -80,25 +80,15 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 			//On traite les jointures
 			$this->setLinkedItemIds($valueRows, $itemSchema['propertySchemas']);
 			
-			//On récupères les propriétés
-			$allItemProperties=[];
+			//On récupères les propriétés et on les fusionne pour remplir $itemDataList
+			$itemDataList = []; //Tableau indexant les tableaux JSON-LD des items
 			foreach ($valueRows as $row) {//Pour chaque entrée dans Aline
-				$allItemProperties[] = NULL===$row ? NULL
-						: array_merge(
+				if( NULL === $row ) continue;
+				
+				$itemDataList[$row['unq']] = array_merge($genericData,
 							$this->getPropertiesArray($itemSchema['propertySchemas'], $row),
 							$this->getMediasArray($itemSchema, $row)
 						);
-			}
-			
-			//Et on fusionne le tout pour remplir $itemDataList
-			$itemDataList = []; //Tableau indexant les tableaux JSON-LD des items
-			foreach ($valueRows as $row){
-				$properties = current($allItemProperties);
-				
-				if( NULL !== $properties )
-					$itemDataList[$row['unq']] = array_merge($genericData, $properties);
-				
-				next($allItemProperties);
 			}
 			
 			//Tableau associant aux clés de $itemDataList les ResourceReference des items créés
