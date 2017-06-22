@@ -10,7 +10,9 @@ use Omeka\Api\Representation\ResourceReference;
  * @author pols12
  */
 class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
-	
+
+	const SEPARATOR = "€€";
+
 	/* @var $pdo \PDO */
     protected $pdo;
     /* @var $api \Omeka\Api\Manager */
@@ -56,7 +58,7 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
     private function import() {
 		foreach ($this->tableSchema as $itemSchema) {
 			//Si la configuration n’est pas défini, on passe à l’item suivant
-			if(!isset($itemSchema['item_set'])) continue;
+			if(!isset($itemSchema['item_set'])) throw new \Exception("Piege !");
 			
 			$this->logger->info("Début de l’import des {$itemSchema['item_set']}...");
 			
@@ -91,6 +93,9 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 						);
 			}
 			
+			//On met à jour les items déjà présents plutôt que d’en recréer
+			$this->tryMerge($itemSchema, $itemDataList);
+			
 			//Tableau associant aux clés de $itemDataList les ResourceReference des items créés
 			$itemReferences=$this->api->batchCreate('items', $itemDataList)->getContent();
 			
@@ -99,6 +104,11 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 			//On stocke dans Aline les Ids des items que l’on vient de créer.
 			$this->persistIds($itemReferences, $itemSchema['persist_column'],
 					$itemSchema['item_set'], $uniqueColumns);
+			
+			if($this->shouldStop()) {
+				$this->logger->warn("Le Job a dû s’arrêté avant de se terminer.");
+				break;
+			}
 		}
 		
 		return count($itemReferences);
@@ -114,8 +124,8 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 	 * colonnes associées aux valeurs).
 	 * @throws \Exception Problème de connexion à la BDD.
 	 */
-	private function getValuesFromAline(array $unqColumns=['id'], string $orderBy='id') {
-		$sql="SELECT *, CONCAT(".implode(",',',", $unqColumns).") unq FROM {$this->table}";
+	private function getValuesFromAline(array $unqColumns=['id'], string $orderBy='unq') {
+		$sql="SELECT *, CONCAT(".implode(",'".self::SEPARATOR."',", $unqColumns).") unq FROM {$this->table}";
 		
 		//Groupement pour empêcher les doublons
 		$sql.=" GROUP BY unq";
@@ -127,7 +137,7 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 		if($statement)
 			$rows=$statement->fetchAll(\PDO::FETCH_ASSOC);
 		else
-			throw new \Exception(print_r($this->pdo->errorInfo()), true);
+			throw new \Exception(print_r($this->pdo->errorInfo(), true));
 		
 		//On indexe les lignes par la concaténation des colonnes uniques
 		$unqIndexedRows=[];
@@ -181,10 +191,11 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 	 * caractéristiques de sa définition.
 	 */
 	private function setSchemaPropertyIds(array &$propertySchemas) {
-		foreach($propertySchemas as $term => &$propertySchema)
+		foreach($propertySchemas as $term => &$propertySchema) {
 			$propertySchema['property_id']= $this->api
 				->search('properties', ['term'=>$term])->getContent()[0]
 				->id();
+		}
 	}
 	
 	/**
@@ -231,6 +242,8 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 	private function getCleanedRows(array $schema, array $uniqueColumns=['id'], array $dustValues=[]) {
 		$valueRows=$this->getValuesFromAline($uniqueColumns);
 		
+		//On passe la ligne à NULL si une valeur primordiale manque ou s’il
+		// n’y a aucune valeur utile.
 		foreach ($valueRows as &$row){ //Pour chaque ligne
 			
 			//Si la valeur d’une colonne unique est dans $dustValues, l’entrée
@@ -276,21 +289,36 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 		
 		$mediaData=[];
 		foreach ($mediaSchemas as $schema) {
-			$text = isset($schema['valueColumn']) //Si c’est du texte,
-					? nl2br(htmlspecialchars($values[$schema['valueColumn']])) //on l’assainit.
-					//Sinon c’est un nom de fichier,
-					: $this->getFileContent($values[$schema['fileNameColumn']]); //on l’importe.
-			
-			if(empty($text)) continue;
+			if(isset($schema['ingestUrl']) && $schema['ingestUrl']) {
+				$url=$this->getImage($values);
+//				$url=$this->getFile($values[$schema['fileNameColumn']], false);
+				
+				if(empty($url)) continue;
+				
+				$genericMediaData=[
+					'o:ingester' => 'url',
+					'o:is_public' => $schema['public'],
+					'ingest_url' => $url,
+				];
+			} else {
+				$text = isset($schema['valueColumn']) //Si c’est du texte,
+						? nl2br(htmlspecialchars($values[$schema['valueColumn']])) //on l’assainit.
+						//Sinon c’est un nom de fichier,
+						: $this->getFile($values[$schema['fileNameColumn']]); //on l’importe.
+
+				if(empty($text)) continue;
+
+				$genericMediaData= [
+					"o:ingester" => "html",
+					"o:is_public" => $schema['public'],
+					"html" => $text,
+				];
+			}
 			
 			//On prépare le schéma des propriétés
 			$this->setSchemaPropertyIds($schema['propertySchemas']);
 			
-			$mediaData[] = array_merge( [
-						"o:ingester" => "html",
-						"o:is_public" => $schema['public'],
-						"html" => $text,
-					],
+			$mediaData[] = array_merge( $genericMediaData,
 					$this->getPropertiesArray($schema['propertySchemas'], $values) );
 		}
 		return ['o:media'=> $mediaData];
@@ -309,14 +337,16 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 		$this->createColumnIfNotExist($column, $label);
 		
 		foreach ($itemReferences as $uniqueValuesStr => $item) {
-			$uniqueValues = explode(",", $uniqueValuesStr);
+			$uniqueValues = explode(self::SEPARATOR, $uniqueValuesStr);
 			
-			$sql="UPDATE `$this->table` SET `$column`='{$item->id()}' WHERE $uniqueColumns[0]='$uniqueValues[0]'";
+			$sql="UPDATE `$this->table` SET `$column`='{$item->id()}' WHERE $uniqueColumns[0]=?";
 			for($i=1; $i<count($uniqueValues); $i++)
-				$sql.="AND $uniqueColumns[$i]='$uniqueValues[$i]'";
+				$sql.="AND $uniqueColumns[$i]=?";
 			
-			if(false === $this->pdo->exec($sql))
-				throw new Exception(print_r($this->pdo->errorInfo()), true);
+			$statement = $this->pdo->prepare($sql);
+			
+			if(false === $statement->execute($uniqueValues))
+				throw new \Exception(print_r($this->pdo->errorInfo(), true));
 		}
 	}
 	
@@ -375,11 +405,18 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 				$statement = $this->pdo->query($sql);
 				$foreignRows = $statement
 						->fetchAll(\PDO::FETCH_GROUP | \PDO::FETCH_UNIQUE | \PDO::FETCH_ASSOC);
-
+				//Les $foreignRows sont indexés par la première colonne de la table
 
 				foreach ($rows as &$row) {
+					$foreignKeyValue =$row[ $schema['foreignKeyColumn']];
+					
+					if(empty($foreignKeyValue)) { //S’il n’y a pas de clé étrangère pour cette ligne
+						$row[$itemIdColumn] = NULL;
+						continue;
+					}
+					
 					//On récupère la ligne étrangère correspondant à notre $row
-					$foreignRow = $foreignRows[ $row[ $schema['foreignKeyColumn'] ] ];
+					$foreignRow = $foreignRows[ $foreignKeyValue ];
 
 					//On crée la nouvelle colonne, copie de celle de la table étrangère
 					$row[$itemIdColumn] = $foreignRow [$itemIdColumn];
@@ -395,7 +432,7 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 	 * @return string Contenu du fichier
 	 * @throws \Exception Erreur de connexion PDO.
 	 */
-	private function getFileContent($fileId) {
+	private function getFile($fileId, bool $getContent=true) {
 		if(empty($fileId)) return;
 		$sql="SELECT * FROM xmlfile WHERE file='$fileId'";
 		$statement=$this->pdo->query($sql);
@@ -406,7 +443,22 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 		
 		$fileName="http://henripoincarepapers.univ-nantes.fr/{$row['url']}";
 		
-		return file_get_contents($fileName);
+		if($getContent) return file_get_contents($fileName);
+		else return $fileName;
+	}
+	
+	private function getImage($values){
+		if(empty($values['imgdir'])
+				||empty($values['imgfile'])
+				||empty($values['ext'])
+				||$values['imgdir']=='pro')
+			return "";
+		$fileName='http://henripoincarepapers.univ-nantes.fr/chp/'
+			.$values['imgdir'].'/'
+			.$values['imgfile']
+			.explode(':',$values['ext'])[0]
+			.'.jpg';
+		return $fileName;
 	}
 
 	/**
@@ -438,6 +490,8 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 	 * @return array Liste de colonnes formant une clé unique dans la BDD.
 	 */
 	private function getUniqueColumns(array $itemSchema) {
+		if(isset($itemSchema['uniqueColumn']))
+			return [$itemSchema['uniqueColumn']];
 		//Si aucune colonne unique n’est définie, on utilise `id`
 		if( !isset($itemSchema['uniqueTerms']) )
 			return ['id'];
@@ -445,6 +499,11 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 		$uniqueColumns=[];
 		foreach ($itemSchema['uniqueTerms'] as $term) {
 			$propertySchema=$itemSchema['propertySchemas'][$term];
+			
+			if(isset($propertySchema['defaultValueColumns']))
+				foreach ($propertySchema['defaultValueColumns'] as $col)
+					$uniqueColumns[]=$col;
+			else
 			$uniqueColumns[] = isset($propertySchema['valueColumn'])
 					? $propertySchema['valueColumn']
 					: constant('self::'.strtoupper($propertySchema['foreignTable']))
@@ -506,6 +565,54 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 			
 			$statementUpd->execute($values);
 			if(!$statementUpd) throw new \Exception(print_r($pdo->errorInfo(), true));
+		}
+	}
+
+	private function tryMerge($itemSchema, &$itemDataList) {
+		if(!isset($itemSchema['tryMerge']) || !$itemSchema['tryMerge'])
+			return;
+		
+		foreach ($itemDataList as $key => $newData) {
+			
+			//On recherche un item qui aurait les mêmes valeurs pour les colonnes uniques
+			$searched=[];
+			foreach($itemSchema['uniqueTerms'] as $term) {
+				$propertySchema=$newData[$term][0];
+				
+				if(isset($propertySchema['@value'])) {
+					$type='eq';
+					$val=$propertySchema['@value'];
+				} else { //C’est une ressource
+					$type='res';
+					$val=$propertySchema['value_resource_id'];
+				}
+				$searched[]=[
+					'property' => $propertySchema['property_id'],
+					'type' => $type,
+					'text' => $val
+				];
+			}
+			$this->logger->debug(print_r($searched, true));
+			$results = $this->api->search('items', [
+				'item_set_id' => $newData['o:item_set'][0]['o:id'],
+				'property'=> $searched])->getContent();
+			
+			//S’il n’y en a pas, on passe à l’entrée suivante
+			if(count($results)===0) continue;
+			
+			if(count($results)>1) $this->logger->warn(count($results)
+					." items avec les mêmes valeurs uniques ("
+					.  implode(',', $itemSchema['uniqueTerms'])
+					.") sont déjà insérés.");
+			
+			/* @var $item \Omeka\Api\Representation\ItemRepresentation */
+			$item=$results[0];
+			$this->logger->debug(print_r($newData, true));
+			//On met à jour l’item trouvé avec les nouvelles données
+			$this->api->update('items', $item->id(), $newData);
+			
+			//Et on supprime les données de la liste des items à créer
+			unset($itemDataList[$key]);
 		}
 	}
 }
