@@ -106,7 +106,7 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 					$itemSchema['item_set'], $uniqueColumns);
 			
 			if($this->shouldStop()) {
-				$this->logger->warn("Le Job a dû s’arrêté avant de se terminer.");
+				$this->logger->warn("Le Job a dû s’arrêter avant de se terminer.");
 				break;
 			}
 		}
@@ -157,9 +157,13 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 	 * @return array Tableau JSON-LD compatible listant les propriétés et leurs
 	 * valeurs.
 	 */
-	private function getPropertiesArray(array $schemas, array $values) {
+	private function getPropertiesArray(array $schemas, array $values, bool $recursive=false) {
 		$properties=[];
 		foreach ($schemas as $term => $schema) { //Pour chaque propriété du schéma
+			if(isset($schema[0])) { //S’il y a plusieurs valeurs pour la propriété
+				$properties[$term]=$this->getPropertiesArray($schema, $values, true);
+				continue;
+			}
 			$data=$schema;
 			switch ($data['type']){
 				case 'uri':
@@ -180,7 +184,10 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 			}
 			unset($data['valueColumn'], $data['defaultValue'], $data['defaultValueColumns']);
 			
-			$properties[$term]=[$data];
+			if($recursive)
+				$properties[$term]=$data;
+			else
+				$properties[$term]=[$data];
 		}
 		return $properties;
 	}
@@ -192,9 +199,17 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 	 */
 	private function setSchemaPropertyIds(array &$propertySchemas) {
 		foreach($propertySchemas as $term => &$propertySchema) {
-			$propertySchema['property_id']= $this->api
+			$id = $this->api
 				->search('properties', ['term'=>$term])->getContent()[0]
 				->id();
+			
+			if(isset($propertySchema[0])) {//S’il y a plusieurs valeurs pour la propriété
+				foreach ($propertySchema as &$valueSchema) {
+					$valueSchema['property_id']=$id;
+				}
+			} else {
+				$propertySchema['property_id']=$id;
+			}
 		}
 	}
 	
@@ -393,7 +408,11 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 	 * @param string $this->table Nom de la table d’où proviennent $rows.
 	 */
 	private function setLinkedItemIds(array &$rows, array $propertySchemas) {
-		foreach ($propertySchemas as $term => $schema) { //Pour chaque propriété
+		foreach ($propertySchemas as $schema) { //Pour chaque propriété
+			if(isset($schema[0])) { //S’il y a plusieurs valeurs pour la propriété
+				$this->setLinkedItemIds($rows, $schema);
+				continue;
+			}
 			if( 'resource' === $schema['type'] //si la valeur est un autre item
 					&& ($foreignTable = $schema['foreignTable']) !== $this->table ) //et que l’item ne vient pas de la même table
 			{
@@ -592,7 +611,7 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 					'text' => $val
 				];
 			}
-			$this->logger->debug(print_r($searched, true));
+			
 			$results = $this->api->search('items', [
 				'item_set_id' => $newData['o:item_set'][0]['o:id'],
 				'property'=> $searched])->getContent();
@@ -607,7 +626,7 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 			
 			/* @var $item \Omeka\Api\Representation\ItemRepresentation */
 			$item=$results[0];
-			$this->logger->debug(print_r($newData, true));
+			
 			//On met à jour l’item trouvé avec les nouvelles données
 			$this->api->update('items', $item->id(), $newData);
 			

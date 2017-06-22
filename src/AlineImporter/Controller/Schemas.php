@@ -67,58 +67,6 @@ const ARCHIVES=[
 	]
 ];
 const CHP_AUTHOR=[
-	'Auteur'=>[
-		'resource_class' => 'foaf:Person',
-		'resource_template' => 'Correspondant',
-		'item_set' => 'Correspondants d’Henri Poincaré',
-		'persist_column' => 'auteurOId',
-		'medias' => [
-			'Biographie'=>[
-				'public' => true,
-				'valueColumn' => null,
-				'fileNameColumn' => 'texbio',
-				'propertySchemas'=> [
-					'dcterms:title' => [
-						'type' => 'literal',
-						'defaultValue' => 'Biographie de %s',
-						'defaultValueColumns' => ['chapterhead']],
-					'dcterms:language' => [
-						'type' => 'literal',
-						'valueColumn' => 'lang'],
-					'dcterms:creator' => [ //À reprendre après import pour le créer comme resource
-						'type' => 'literal',
-						'defaultValue' => 'Scott Walter',
-						'defaultValueColumns' => []],
-					],
-			],
-		],
-		'propertySchemas'=> [
-			'dcterms:title' => [
-				'type' => 'literal',
-				'valueColumn' => 'chapterhead'], //Poincaré à créer manuellement !
-			'foaf:givenName' => [
-				'type' => 'literal',
-				'split' => [',', [1]], //['caractère de découpe', indices du tableau]
-				'valueColumn' => 'name'],
-			'foaf:familyName' => [
-				'type' => 'literal',
-				'split' => [',', [0]],
-				'valueColumn' => 'name'],
-			'dbo:viafId' => [
-				'type' => 'uri',
-				'defaultValue' => 'http://viaf.org/viaf/%s',
-				'defaultValueColumns' => ['viaf']],
-			'foaf:isPrimaryTopicOf' => [
-				'type' => 'resource',
-				'foreignTable' => 'chp_author',
-				'schemaIndex' => 'Chapitre'],
-			'locn:address' => [
-				'type' => 'resource',
-				'foreignTable' => 'chp_author',
-				'schemaIndex' => 'Pays'],
-		],
-	],
-	'Piege' => [], //Le piège à importation !
 	'Volume'=>[
 		'resource_class' => 'bibo:Book',
 		'resource_template' => 'Ouvrage',
@@ -171,9 +119,58 @@ const CHP_AUTHOR=[
 				'valueColumn' => 'nation'],
 		],
 	],
-	
-
-
+	'Auteur'=>[
+		'resource_class' => 'foaf:Person',
+		'resource_template' => 'Correspondant',
+		'item_set' => 'Correspondants d’Henri Poincaré',
+		'persist_column' => 'auteurOId',
+		'medias' => [
+			'Biographie'=>[
+				'public' => true,
+				'valueColumn' => null,
+				'fileNameColumn' => 'texbio',
+				'propertySchemas'=> [
+					'dcterms:title' => [
+						'type' => 'literal',
+						'defaultValue' => 'Biographie de %s',
+						'defaultValueColumns' => ['chapterhead']],
+					'dcterms:language' => [
+						'type' => 'literal',
+						'valueColumn' => 'lang'],
+					'dcterms:creator' => [ //À reprendre après import pour le créer comme resource
+						'type' => 'literal',
+						'defaultValue' => 'Scott Walter',
+						'defaultValueColumns' => []],
+					],
+			],
+		],
+		'propertySchemas'=> [
+			'dcterms:title' => [
+				'type' => 'literal',
+				'valueColumn' => 'chapterhead'], //Poincaré à créer manuellement !
+			'foaf:givenName' => [
+				'type' => 'literal',
+				'split' => [',', [1]], //['caractère de découpe', indices du tableau]
+				'valueColumn' => 'name'],
+			'foaf:familyName' => [
+				'type' => 'literal',
+				'split' => [',', [0]],
+				'valueColumn' => 'name'],
+			'dbo:viafId' => [
+				'type' => 'uri',
+				'defaultValue' => 'http://viaf.org/viaf/%s',
+				'defaultValueColumns' => ['viaf']],
+			'foaf:isPrimaryTopicOf' => [
+				'type' => 'resource',
+				'foreignTable' => 'chp_author',
+				'schemaIndex' => 'Chapitre'],
+			'locn:address' => [
+				'type' => 'resource',
+				'foreignTable' => 'chp_author',
+				'schemaIndex' => 'Pays'],
+		],
+	],
+//	'Piege' => [], //Le piège à importation !
 ];
 const HPPB=[
 	'Auteur'=>[ //À isoler avant !
@@ -503,132 +500,6 @@ const HPPB=[
 	],
 ];
 const CHPS=[
-	'Lettre' => [ //si doc=0
-		'resource_class' => 'bibo:Letter',
-		'resource_template' => 'Lettre',
-		'item_set' => 'Correspondance',
-		'persist_column' => 'lettreOId',
-		'uniqueColumn' => 'rec',
-		'medias' => [
-			'Scan'=>[
-				'public' => true,
-				'valueColumn' => null,
-				'fileNameColumn' => 'texfile',
-				'ingestUrl' => true,
-				'propertySchemas'=> [
-					'dcterms:title' => [
-						'type' => 'literal',
-						'defaultValue' => 'Page ? sur %s de la lettre %s',
-						'defaultValueColumns' => ['pp', 'title']],
-					'exif:resolution'=>[
-						'type' => 'literal',
-						'valueColumn' => 'imgsrcdpi'],
-				],
-			],
-//			'transcription' => [], // À FAIRE
-			'Notes' => [
-				'public' => false,
-				'valueColumn' => 'nt',
-				'propertySchemas' => [
-					'dcterms:title'=>[
-						'type' => 'literal',
-						'defaultValue' => 'Remarques sur le document',
-						'defaultValueColumns' => []],
-				]
-			],
-			'Éditeur' => [
-				'public' => false,
-				'valueColumn' => 'ed',
-				'propertySchemas' => [
-					'dcterms:title'=>[
-						'type' => 'literal',
-						'defaultValue' => 'Éditeur de la lettre',
-						'defaultValueColumns' => []],
-				]
-			]
-		],
-		'propertySchemas'=> [
-			'dcterms:title'=>[
-				'type' => 'literal',
-				'valueColumn' => 'title'],
-			'dm2e:incipit'=>[
-				'type' => 'literal',
-				'valueColumn' => 'opng'],
-			'dcterms:date'=>[
-				'type' => 'literal',
-				'valueColumn' => 'date'],
-			'dcterms:date'=>[ //date au plus tard, à revoir
-				'type' => 'literal', //si !=date et !=1950-00-00
-				'valueColumn' => 'datehi'],
-			'dcterms:date'=>[ //à revoir
-				'type' => 'literal',
-				'defaultValue' => '%s-%s-%s',
-				'defaultValueColumns' => ['yr', 'mon', 'day']],
-			'dcterms:isPartOf'=>[ //Publication, à revoir
-				'type' => 'literal',
-				'valueColumn' => 'pb'],
-			'bibo:numPages'=>[
-				'type' => 'literal',
-				'valueColumn' => 'pp'],
-			'dcterms:language'=>[
-				'type' => 'literal',
-				'valueColumn' => 'lang'],
-			'bibo:section'=>[
-				'type' => 'literal',
-				'valueColumn' => 'sec'],
-			'dcterms:isPartOf' => [
-				'type' => 'resource',
-				'foreignTable' => 'chps',
-				'schemaIndex' => 'Chapitre'],
-			'dcterms:references'=>[ //À revoir
-				'type' => 'literal',
-				'valueColumn' => 'xref'],
-			'dcterms:isPartOf'=>[
-				'type' => 'literal',
-				'defaultValue' => 'CD n° %s',
-				'defaultValueColumns' => ['cd']],
-			'dcterms:type'=>[ //type de lettre, à revoir
-				'type' => 'literal',
-				'valueColumn' => 'type'],
-			'dcterms:isPartOf'=>[ //endroit dans les archives, à revoir
-				'type' => 'literal',
-				'valueColumn' => 'docid'],
-			'dcterms:isPartOf'=>[ //à revoir, curate=conserver
-				'type' => 'resource',
-				'foreignTable' => 'archives',
-				'schemaIndex' => 'Lieu d’archives',
-				'foreignKeyColumn' => 'scid'],
-			'dcterms:rightsHolder'=>[
-				'type' => 'resource',
-				'foreignTable' => 'chps',
-				'schemaIndex' => 'Copyright'],
-//			'sioc:reply_of'=>[ //Voc peu adapté // Récursivité, à traiter à part...
-//				'type' => 'resource',
-//				'foreignTable' => 'chps',
-//				'schemaIndex' => 'Lettre'],
-//			'sioc:has_reply'=>[ //Voc peu adapté
-//				'type' => 'resource',
-//				'foreignTable' => 'chps',
-//				'schemaIndex' => 'Lettre'],
-			'dm2e:writer'=>[
-				'type' => 'resource',
-				'foreignTable' => 'chps',
-				'schemaIndex' => 'Expéditeur'],
-			'gndo:addressee'=>[
-				'type' => 'resource',
-				'foreignTable' => 'chps',
-				'schemaIndex' => 'Destinataire'],
-			'ebucore:hasCreationLocation'=>[ //à améliorer
-				'type' => 'resource',
-				'foreignTable' => 'chps',
-				'schemaIndex' => 'Lieu'],
-			'locn:address'=>[ //à améliorer
-				'type' => 'resource',
-				'foreignTable' => 'chps',
-				'schemaIndex' => 'Destination'],
-		]
-	],
-	'Piege'=>[], // Pour éviter d’importer ce qu’il y a en dessous de cette ligne
 	'Volume'=>[
 		'tryMerge' => true,
 		'resource_class' => 'bibo:Book',
@@ -760,6 +631,134 @@ const CHPS=[
 				'valueColumn' => 'ln'],
 		],
 	],
+	'Lettre' => [ //si doc=0
+		'resource_class' => 'bibo:Letter',
+		'resource_template' => 'Lettre',
+		'item_set' => 'Correspondance',
+		'persist_column' => 'lettreOId',
+		'uniqueColumn' => 'rec',
+		'medias' => [
+			'Scan'=>[
+				'public' => true,
+				'valueColumn' => null,
+				'fileNameColumn' => 'texfile',
+				'ingestUrl' => true,
+				'propertySchemas'=> [
+					'dcterms:title' => [
+						'type' => 'literal',
+						'defaultValue' => 'Page ? sur %s de la lettre %s',
+						'defaultValueColumns' => ['pp', 'title']],
+					'exif:resolution'=>[
+						'type' => 'literal',
+						'valueColumn' => 'imgsrcdpi'],
+				],
+			],
+//			'transcription' => [], // À FAIRE
+			'Notes' => [
+				'public' => false,
+				'valueColumn' => 'nt',
+				'propertySchemas' => [
+					'dcterms:title'=>[
+						'type' => 'literal',
+						'defaultValue' => 'Remarques sur le document',
+						'defaultValueColumns' => []],
+				]
+			],
+			'Éditeur' => [
+				'public' => false,
+				'valueColumn' => 'ed',
+				'propertySchemas' => [
+					'dcterms:title'=>[
+						'type' => 'literal',
+						'defaultValue' => 'Éditeur de la lettre',
+						'defaultValueColumns' => []],
+				]
+			]
+		],
+		'propertySchemas'=> [
+			'dcterms:title'=>[
+				'type' => 'literal',
+				'valueColumn' => 'title'],
+			'dm2e:incipit'=>[
+				'type' => 'literal',
+				'valueColumn' => 'opng'],
+			'dcterms:date'=>[
+				[
+				'type' => 'literal',
+				'valueColumn' => 'date'],
+				[ //date au plus tard, à revoir
+				'type' => 'literal', //si !=date et !=1950-00-00
+				'valueColumn' => 'datehi'],
+				[ //à revoir
+				'type' => 'literal',
+				'defaultValue' => '%s-%s-%s',
+				'defaultValueColumns' => ['yr', 'mon', 'day']],],
+			'dcterms:isPartOf'=>[
+				[ //Publication, à revoir
+				'type' => 'literal',
+				'valueColumn' => 'pb'],
+				[
+				'type' => 'resource',
+				'foreignTable' => 'chps',
+				'schemaIndex' => 'Chapitre'],
+				[
+				'type' => 'literal',
+				'defaultValue' => 'CD n° %s',
+				'defaultValueColumns' => ['cd']],
+				[ //endroit dans les archives, à revoir
+				'type' => 'literal',
+				'valueColumn' => 'docid'],
+				[ //à revoir, curate=conserver
+				'type' => 'resource',
+				'foreignTable' => 'archives',
+				'schemaIndex' => 'Lieu d’archives',
+				'foreignKeyColumn' => 'scid'],],
+			'bibo:numPages'=>[
+				'type' => 'literal',
+				'valueColumn' => 'pp'],
+			'dcterms:language'=>[
+				'type' => 'literal',
+				'valueColumn' => 'lang'],
+			'bibo:section'=>[
+				'type' => 'literal',
+				'valueColumn' => 'sec'],
+			'dcterms:references'=>[ //À revoir
+				'type' => 'literal',
+				'valueColumn' => 'xref'],
+			'dcterms:type'=>[ //type de lettre, à revoir
+				'type' => 'literal',
+				'valueColumn' => 'type'],
+			'dcterms:rightsHolder'=>[
+				'type' => 'resource',
+				'foreignTable' => 'chps',
+				'schemaIndex' => 'Copyright'],
+//			'sioc:reply_of'=>[ //Voc peu adapté // Récursivité, à traiter à part...
+//				'type' => 'resource',
+//				'foreignTable' => 'chps',
+//				'schemaIndex' => 'Lettre'],
+//			'sioc:has_reply'=>[ //Voc peu adapté
+//				'type' => 'resource',
+//				'foreignTable' => 'chps',
+//				'schemaIndex' => 'Lettre'],
+			'dm2e:writer'=>[
+				'type' => 'resource',
+				'foreignTable' => 'chps',
+				'schemaIndex' => 'Expéditeur'],
+			'gndo:addressee'=>[
+				'type' => 'resource',
+				'foreignTable' => 'chps',
+				'schemaIndex' => 'Destinataire'],
+			'ebucore:hasCreationLocation'=>[ //à améliorer
+				'type' => 'resource',
+				'foreignTable' => 'chps',
+				'schemaIndex' => 'Lieu'],
+			'locn:address'=>[ //à améliorer
+				'type' => 'resource',
+				'foreignTable' => 'chps',
+				'schemaIndex' => 'Destination'],
+		]
+	],
+//	'Piege'=>[], // Pour éviter d’importer ce qu’il y a en dessous de cette ligne
 //*/
 /*	'Varia' => [ //À RENSEIGNER
 		'resource_class' => 'dcterms:Location',
