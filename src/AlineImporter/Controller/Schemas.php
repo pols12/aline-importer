@@ -687,12 +687,15 @@ const CHPS=[
 				'type' => 'literal',
 				'valueColumn' => 'date'],
 				[ //date au plus tard, à revoir
-				'type' => 'literal', //si !=date et !=1950-00-00
-				'valueColumn' => 'datehi'],
+				'type' => 'literal', //si !=date
+				'valueColumn' => 'datehi',
+				'dustValues' => ['1950-00-00'],
+				'duplicates' => ['date']],
 				[ //à revoir
 				'type' => 'literal',
 				'defaultValue' => '%s-%s-%s',
-				'defaultValueColumns' => ['yr', 'mon', 'day']],],
+				'defaultValueColumns' => ['yr', 'mon', 'day']],
+				'duplicates' => ['date', 'datehi']],
 			'dcterms:isPartOf'=>[
 				[ //Publication, à revoir
 				'type' => 'literal',

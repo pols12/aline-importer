@@ -491,17 +491,43 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 	 * @return string Valeur de la propriété.
 	 */
 	private function getPropertyValue(array $schema, array $values) {
-		$value = isset($schema['valueColumn']) //Si une colonne de la BDD contient l’info
-			? $values[$schema['valueColumn']] //on l’assigne
-			: vsprintf( $schema['defaultValue'], //Sinon on génère une valeur
-					array_intersect_key($values,array_flip($schema['defaultValueColumns'])) );
+		if( isset($schema['valueColumn']) ) //Si une colonne de la BDD contient l’info
+			$value = $values[$schema['valueColumn']]; //on l’assigne
+		
+		else {//Sinon on génère une valeur
+			$columnValues=array_intersect_key( $values,
+					array_flip($schema['defaultValueColumns']) );
+			
+			$empty=true;
+			foreach ($columnValues as $columnValue)
+				if(!empty($columnValue)) $empty=false;
+			
+			$value = $empty ? '' : vsprintf( $schema['defaultValue'], $columnValues);
+		}
+					
 		
 		if( isset($schema['split']) ){ //Si la valeur contient d’autres infos non voulues
 			$splittedValue = explode( $schema['split'][0], $value ); //On découpe la valeur
 			$keys=array_flip($schema['split'][1]); //On récupère l’ordre des infos voulues
-			$gluedValue = implode(" ", //Et on r
+			$value = implode(" ", //Et on r
 					array_intersect_key(array_replace($keys, $splittedValue), $keys) ); 
-			return trim($gluedValue);
+		}
+		
+		//Mais on renverra une chaine vide si la valeur...
+		
+		//... est une valeur poubelle
+		if( isset($schema['dustValues'])
+				&& in_array($value, $schema['dustValues']) )
+				$value='';
+		
+		//... est en double
+		elseif( isset($schema['duplicates']) ) {
+			foreach ($schema['duplicates'] as $col) {
+				if($values[$col]===$value){
+					$value='';
+					break;
+				}
+			}
 		}
 		
 		return $value;
