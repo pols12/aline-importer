@@ -11,7 +11,7 @@ use Omeka\Api\Representation\ResourceReference;
  */
 class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 
-	const SEPARATOR = "€€";
+	const SEPARATOR = "€€"; //Séparateur arbitraire qui ne risque pas d’être dans les colonnes
 
 	/* @var $pdo \PDO */
     protected $pdo;
@@ -93,11 +93,12 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 						);
 			}
 			
-			//On met à jour les items déjà présents plutôt que d’en recréer
-			$this->tryMerge($itemSchema, $itemDataList);
-			
 			//Tableau associant aux clés de $itemDataList les ResourceReference des items créés
-			$itemReferences=$this->api->batchCreate('items', $itemDataList)->getContent();
+			$itemReferences=array_merge(
+				$this->tryMerge($itemSchema, $itemDataList) //Mise à jour des items déjà présents
+				,
+				$this->api->batchCreate('items', $itemDataList)->getContent() //Création des autres items
+			);
 			
 			$this->logger->info(count($itemReferences)." items ont été créés.");
 			
@@ -343,6 +344,8 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 	 * Sauvegarde les Ids des ResourcesReference données.
 	 * @param ResourceReference[] $itemReferences
 	 * @param string|null $column Colonne de la BDD qui contiendra les ids des items à mémoriser
+	 * @param string $label Type d’item inséré pour préciser dans le commentair de la colonne.
+	 * @param array $uniqueColumns Liste des colonnes formant une clé unique pour chaque item.
 	 */
 	private function persistIds(array $itemReferences, $column, string $label,
 			array $uniqueColumns=['id']) {
@@ -494,8 +497,10 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 					array_intersect_key($values,array_flip($schema['defaultValueColumns'])) );
 		
 		if( isset($schema['split']) ){ //Si la valeur contient d’autres infos non voulues
-			$splittedValue = explode( $schema['split'][0], $value );
-			$gluedValue = implode(" ", array_intersect_key($splittedValue, array_flip($schema['split'][1])));
+			$splittedValue = explode( $schema['split'][0], $value ); //On découpe la valeur
+			$keys=array_flip($schema['split'][1]); //On récupère l’ordre des infos voulues
+			$gluedValue = implode(" ", //Et on r
+					array_intersect_key(array_replace($keys, $splittedValue), $keys) ); 
 			return trim($gluedValue);
 		}
 		
@@ -587,9 +592,19 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 		}
 	}
 
-	private function tryMerge($itemSchema, &$itemDataList) {
+	/**
+	 * 
+	 * @param array $itemSchema Schéma de configuration de l’item.
+	 * @param array $itemDataList Liste des représentations des items à insérer
+	 * (ou à fusionner avec les existants).
+	 * @return ResourceReference[] Liste des items mis à jour, indexés par la
+	 * valeur de leur colonne unique dans la BDD.
+	 */
+	private function tryMerge(array $itemSchema, array &$itemDataList) {
 		if(!isset($itemSchema['tryMerge']) || !$itemSchema['tryMerge'])
-			return;
+			return [];
+		
+		$itemReferences=[];
 		
 		foreach ($itemDataList as $key => $newData) {
 			
@@ -627,11 +642,16 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 			/* @var $item \Omeka\Api\Representation\ItemRepresentation */
 			$item=$results[0];
 			
+			//On retient une référence de l’item pour mémoriser son ID dans la BDD
+			$itemReferences[$key]=$item->getReference();
+			
 			//On met à jour l’item trouvé avec les nouvelles données
 			$this->api->update('items', $item->id(), $newData);
 			
 			//Et on supprime les données de la liste des items à créer
 			unset($itemDataList[$key]);
 		}
+		
+		return $itemReferences;
 	}
 }
