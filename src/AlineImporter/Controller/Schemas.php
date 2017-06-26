@@ -640,9 +640,9 @@ const CHPS=[
 		'medias' => [
 			'Scan'=>[
 				'public' => true,
-				'valueColumn' => null,
 				'fileNameColumn' => 'texfile',
 				'ingestUrl' => true,
+				'isImage' => true,
 				'propertySchemas'=> [
 					'dcterms:title' => [
 						'type' => 'literal',
@@ -653,7 +653,21 @@ const CHPS=[
 						'valueColumn' => 'imgsrcdpi'],
 				],
 			],
-//			'transcription' => [], // À FAIRE
+			'Transcription' => [
+				'public' => true,
+				'fileNameColumn' => 'texfile',
+				'ingestUrl' => true,
+				'isImage' => false,
+				'propertySchemas'=> [
+					'dcterms:title' => [
+						'type' => 'literal',
+						'defaultValue' => 'Transcription de la lettre',
+						'defaultValueColumns' => []],
+					'dcterms:language' => [
+						'type' => 'literal',
+						'valueColumn' => 'lang'],
+				],
+			],
 			'Notes' => [
 				'public' => false,
 				'valueColumn' => 'nt',

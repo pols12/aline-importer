@@ -305,21 +305,24 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 		
 		$mediaData=[];
 		foreach ($mediaSchemas as $schema) {
+			//On prépare le schéma des propriétés
+			$this->setSchemaPropertyIds($schema['propertySchemas']);
+			
 			if(isset($schema['ingestUrl']) && $schema['ingestUrl']) {
-				$URLs=$this->getImages($values);
-//				$url=$this->getFile($values[$schema['fileNameColumn']], false);
+				$URLs = $schema['isImage']
+					? $this->getImages($values)
+					: [ $this->getFile($values[$schema['fileNameColumn']], false) ];
 				
 				if(empty($URLs)) continue;
 				
 				foreach ($URLs as $URL) {
+					if(empty($URL)) continue;
 					$genericMediaData=[
 						'o:ingester' => 'url',
 						'o:is_public' => $schema['public'],
 						'ingest_url' => $URL,
 					];
 					
-					//On prépare le schéma des propriétés
-					$this->setSchemaPropertyIds($schema['propertySchemas']);
 
 					$mediaData[] = array_merge( $genericMediaData,
 						$this->getPropertiesArray($schema['propertySchemas'], $values) );
@@ -337,9 +340,6 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 					"o:is_public" => $schema['public'],
 					"html" => $text,
 				];
-				
-				//On prépare le schéma des propriétés
-				$this->setSchemaPropertyIds($schema['propertySchemas']);
 				
 				$mediaData[] = array_merge( $genericMediaData,
 					$this->getPropertiesArray($schema['propertySchemas'], $values) );
