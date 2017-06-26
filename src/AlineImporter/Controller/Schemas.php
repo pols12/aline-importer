@@ -694,8 +694,8 @@ const CHPS=[
 				[ //à revoir
 				'type' => 'literal',
 				'defaultValue' => '%s-%s-%s',
-				'defaultValueColumns' => ['yr', 'mon', 'day']],
-				'duplicates' => ['date', 'datehi']],
+				'defaultValueColumns' => ['yr', 'mon', 'day'],
+				'duplicates' => ['date', 'datehi']],],
 			'dcterms:isPartOf'=>[
 				[ //Publication, à revoir
 				'type' => 'literal',
