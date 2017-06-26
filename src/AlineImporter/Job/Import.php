@@ -306,16 +306,24 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 		$mediaData=[];
 		foreach ($mediaSchemas as $schema) {
 			if(isset($schema['ingestUrl']) && $schema['ingestUrl']) {
-				$url=$this->getImage($values);
+				$URLs=$this->getImages($values);
 //				$url=$this->getFile($values[$schema['fileNameColumn']], false);
 				
-				if(empty($url)) continue;
+				if(empty($URLs)) continue;
 				
-				$genericMediaData=[
-					'o:ingester' => 'url',
-					'o:is_public' => $schema['public'],
-					'ingest_url' => $url,
-				];
+				foreach ($URLs as $URL) {
+					$genericMediaData=[
+						'o:ingester' => 'url',
+						'o:is_public' => $schema['public'],
+						'ingest_url' => $URL,
+					];
+					
+					//On prépare le schéma des propriétés
+					$this->setSchemaPropertyIds($schema['propertySchemas']);
+
+					$mediaData[] = array_merge( $genericMediaData,
+						$this->getPropertiesArray($schema['propertySchemas'], $values) );
+				}
 			} else {
 				$text = isset($schema['valueColumn']) //Si c’est du texte,
 						? nl2br(htmlspecialchars($values[$schema['valueColumn']])) //on l’assainit.
@@ -329,13 +337,13 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 					"o:is_public" => $schema['public'],
 					"html" => $text,
 				];
-			}
-			
-			//On prépare le schéma des propriétés
-			$this->setSchemaPropertyIds($schema['propertySchemas']);
-			
-			$mediaData[] = array_merge( $genericMediaData,
+				
+				//On prépare le schéma des propriétés
+				$this->setSchemaPropertyIds($schema['propertySchemas']);
+				
+				$mediaData[] = array_merge( $genericMediaData,
 					$this->getPropertiesArray($schema['propertySchemas'], $values) );
+			}
 		}
 		return ['o:media'=> $mediaData];
 	}
@@ -469,18 +477,33 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 		else return $fileName;
 	}
 	
-	private function getImage($values){
+	/**
+	 * Donne toutes les URL vers les images de la lettre dont les valeurs sont
+	 * donnés en paramètre.
+	 * @param array $values Ligne de la BDD pour cette lettre.
+	 * @return array Liste des URL vers les images. 
+	 */
+	private function getImages($values){
 		if(empty($values['imgdir'])
 				||empty($values['imgfile'])
-				||empty($values['ext'])
+				||(empty($values['ext']) && empty($values['imgno']))
 				||$values['imgdir']=='pro')
-			return "";
-		$fileName='http://henripoincarepapers.univ-nantes.fr/chp/'
-			.$values['imgdir'].'/'
-			.$values['imgfile']
-			.explode(':',$values['ext'])[0]
-			.'.jpg';
-		return $fileName;
+			return [];
+		
+		$pages=empty($values['ext'])
+				? range(-1, -$values['imgno'])
+				: explode(':',$values['ext']);
+		
+		$fileNames=[];
+		foreach ($pages as $page) {
+			$fileNames[]='http://henripoincarepapers.univ-nantes.fr/chp/'
+				.$values['imgdir'].'/'
+				.$values['imgfile']
+				.$page
+				.'.jpg';
+		}
+		
+		return $fileNames;
 	}
 
 	/**
@@ -663,6 +686,7 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 			if(count($results)>1) $this->logger->warn(count($results)
 					." items avec les mêmes valeurs uniques ("
 					.  implode(',', $itemSchema['uniqueTerms'])
+					.") (". implode(',', array_column($searched, 'text'))
 					.") sont déjà insérés.");
 			
 			/* @var $item \Omeka\Api\Representation\ItemRepresentation */
