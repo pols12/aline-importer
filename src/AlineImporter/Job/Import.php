@@ -315,6 +315,7 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 				
 				if(empty($URLs)) continue;
 				
+				$i=0;
 				foreach ($URLs as $URL) {
 					if(empty($URL)) continue;
 					$genericMediaData=[
@@ -323,9 +324,13 @@ class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
 						'ingest_url' => $URL,
 					];
 					
-
 					$mediaData[] = array_merge( $genericMediaData,
 						$this->getPropertiesArray($schema['propertySchemas'], $values) );
+					
+					//Modification du titre pour préciser le numéro de page
+					$mediaData[$i]['dcterms:title'][0]['@value']
+							= str_replace('?', $i+1, $mediaData[$i]['dcterms:title'][0]['@value']);
+					$i++;
 				}
 			} else {
 				$text = isset($schema['valueColumn']) //Si c’est du texte,
