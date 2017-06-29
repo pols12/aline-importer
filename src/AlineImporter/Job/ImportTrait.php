@@ -63,11 +63,9 @@ trait ImportTrait {
 		}
 
 		//Tableau associant aux clés de $itemDataList les ResourceReference des items créés
-		$itemReferences=array_merge(
+		$itemReferences =
 			$this->tryMerge($itemSchema, $itemDataList) //Mise à jour des items déjà présents
-			,
-			$this->api->batchCreate('items', $itemDataList)->getContent() //Création des autres items
-		);
+			+ $this->api->batchCreate('items', $itemDataList)->getContent(); //Création des autres items
 
 		$this->logger->info(count($itemReferences)." items ont été créés.");
 
@@ -337,17 +335,10 @@ trait ImportTrait {
 			for($i=1; $i<count($uniqueValues); $i++)
 				$sql.=" AND $uniqueColumns[$i]=?";
 			
-			$this->logger->debug($sql);
-			
 			$statement = $this->pdo->prepare($sql);
-			
 			
 			if(false === $statement->execute($uniqueValues))
 				throw new \Exception(print_r($this->pdo->errorInfo(), true));
-			ob_start();
-			$statement->debugDumpParams();
-			$this->logger->debug(ob_get_flush());
-			
 		}
 	}
 	
