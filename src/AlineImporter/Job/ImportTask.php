@@ -6,7 +6,7 @@ namespace AlineImporter\Job;
  *
  * @author pols12
  */
-class ImportTask implements \AlineImporter\Controller\Schemas {
+class ImportTask implements Schemas {
 	use ImportTrait;
 	
 	const SEPARATOR = '€€'; //Séparateur arbitraire qui ne risque pas d’être dans les colonnes

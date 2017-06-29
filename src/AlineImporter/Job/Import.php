@@ -9,7 +9,7 @@ use Omeka\Api\Representation\ResourceReference;
  *
  * @author pols12
  */
-class Import extends AbstractJob implements \AlineImporter\Controller\Schemas {
+class Import extends AbstractJob implements Schemas {
 	use ImportTrait;
 
 	const SEPARATOR = '€€'; //Séparateur arbitraire qui ne risque pas d’être dans les colonnes

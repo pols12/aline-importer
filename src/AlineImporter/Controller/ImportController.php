@@ -7,7 +7,7 @@ use Zend\View\Model\ViewModel;
 use AlineImporter\Job\Import;
 use AlineImporter\Job\ImportTask;
 
-class ImportController extends AbstractActionController implements Schemas {
+class ImportController extends AbstractActionController {
     
 	/* @var $pdo \PDO */
     protected $pdo;
