@@ -15,7 +15,8 @@ class ImportControllerFactory implements FactoryInterface{
         //$mediaIngesterManager = $serviceLocator->get('Omeka\MediaIngesterManager');
         $apiManager = $serviceLocator->get('Omeka\ApiManager');
         
-		$pdo=new \PDO('mysql:dbname=aline;host=localhost','omeka','omeka');
+		require __DIR__ .'/../../../config/db.config.php';
+		$pdo=new \PDO("mysql:dbname=$dbname;host=$host;charset=utf8",$user,$password);
         
 		$adapterManager= $serviceLocator->get('Omeka\ApiAdapterManager');
 		
@@ -23,7 +24,9 @@ class ImportControllerFactory implements FactoryInterface{
 		$acl=$serviceLocator->get('Omeka\Acl');
 		$acl->allow(); //allow anybody to do anything anywhere
 		
-        return new ImportController($pdo, $apiManager, $adapterManager);
+		$logger=$serviceLocator->get('Omeka\Logger');
+		
+        return new ImportController($pdo, $apiManager, $adapterManager, $logger);
     }
 
 }
