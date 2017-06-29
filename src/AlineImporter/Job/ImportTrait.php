@@ -23,7 +23,7 @@ trait ImportTrait {
      * Importe depuis Aline dans Omeka.
      * @return int Nombre d’items du dernier type insérés.
      */
-	abstract private function import();
+	abstract protected function import();
 	
 	private function importItemType(array $itemSchema) {
 		//Si la configuration n’est pas défini, on arrête le script
