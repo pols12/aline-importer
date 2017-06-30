@@ -504,14 +504,117 @@ const HPPB=[
 				'schemaIndex' => 'Journal'],
 		],
 	],
-	'Ouvrage'=>[ 
-		'condition' => "bk IS NOT NULL AND bk!=''",
+	'Ouvrage'=>[ //Ouvrage contenant des articles
+		'condition' => "bk IS NOT NULL AND bk!='' AND art IS NOT NULL",
 		'resource_class' => 'bibo:Book',
 		'resource_template' => 'Ouvrage',
 		'item_set' => 'Ouvrages de Poincaré',
 		'persist_column' => 'ouvrageOId',
 		'uniqueTerms' => ['dcterms:title','dcterms:issued'],
 		'dustValues' => [[NULL],[]],
+		'propertySchemas'=> [
+			'dcterms:title'=>[
+				'type' => 'literal',
+				'valueColumn' => 'bk'],
+			'bibo:volume'=>[
+				'type' => 'literal',
+				'valueColumn' => 'vo'],
+			'dcterms:identifier'=>[
+				'type' => 'literal',
+				'valueColumn' => 'bibkey'],
+			'dcterms:issued'=>[
+				'type' => 'literal',
+				'valueColumn' => 'yr'],
+			'dcterms:isPartOf'=>[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Collection'],
+			'bibo:numPages'=>[
+				'type' => 'literal',
+				'valueColumn' => 'pp'],
+			'dcterms:language'=>[
+				'type' => 'literal',
+				'valueColumn' => 'lang'],
+			'bibo:editor'=>[
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Rédacteur'],
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Rédacteur1'],
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Rédacteur2'],
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Rédacteur3'],
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Rédacteur4'],
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Rédacteur5'],
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Rédacteur6'],
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Rédacteur7']],
+			'bibo:numVolumes'=>[
+				'type' => 'literal',
+				'valueColumn' => 'vols'],
+			'bibo:edition'=>[
+				'type' => 'literal',
+				'valueColumn' => 'edn'],
+			'dcterms:publisher'=>[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Éditeur'],
+		],
+	],
+	'Livre'=>[ // Livre ne contenant pas d’articles renseignés dans la BDD
+		'condition' => "bk IS NOT NULL AND bk!='' AND art IS NULL",
+		'resource_class' => 'bibo:Book',
+		'resource_template' => 'Ouvrage',
+		'item_set' => 'Ouvrages de Poincaré',
+		'persist_column' => 'ouvrageOId',
+		'uniqueTerms' => ['dcterms:title','dcterms:issued'],
+		'dustValues' => [[NULL],[]],
+		'medias' => [
+			'PDF'=>[
+				'public' => true,
+				'fileNameColumn' => 'myrl',
+				'ingestUrl' => true,
+				'isImage' => false,
+				'isPdf' => true,
+				'propertySchemas'=> [
+					'dcterms:title' => [
+						'type' => 'literal',
+						'defaultValue' => '%s (PDF)',
+						'defaultValueColumns' => ['bk']],
+				],
+			],
+			'HTML' => [
+				'public' => true,
+				'fileNameColumn' => 'myxml',
+				'ingestUrl' => true,
+				'isImage' => false,
+				'propertySchemas'=> [
+					'dcterms:title' => [
+						'type' => 'literal',
+						'defaultValue' => '%s (HTML)',
+						'defaultValueColumns' => ['bk']],
+				],
+			],
+		],
 		'propertySchemas'=> [
 			'dcterms:title'=>[
 				'type' => 'literal',
@@ -582,7 +685,7 @@ const HPPB=[
 				'foreignTable' => 'hppb',
 				'schemaIndex' => 'Rédacteur7']],
 			'lv:fulltextOnline'=>[
-				'type' => 'literal',
+				'type' => 'uri',
 				'valueColumn' => 'url'],
 			'bibo:numVolumes'=>[
 				'type' => 'literal',
@@ -605,6 +708,31 @@ const HPPB=[
 		'uniqueTerms' => ['dcterms:identifier'],
 		'dustValues' => [[NULL]],
 		'medias' => [
+			'PDF'=>[
+				'public' => true,
+				'fileNameColumn' => 'myrl',
+				'ingestUrl' => true,
+				'isImage' => false,
+				'isPdf' => true,
+				'propertySchemas'=> [
+					'dcterms:title' => [
+						'type' => 'literal',
+						'defaultValue' => '%s (PDF)',
+						'defaultValueColumns' => ['art']],
+				],
+			],
+			'HTML' => [
+				'public' => true,
+				'fileNameColumn' => 'myxml',
+				'ingestUrl' => true,
+				'isImage' => false,
+				'propertySchemas'=> [
+					'dcterms:title' => [
+						'type' => 'literal',
+						'defaultValue' => '%s (HTML)',
+						'defaultValueColumns' => ['art']],
+				],
+			],
 			'Notes' => [
 				'public' => false,
 				'valueColumn' => 'nt',
@@ -658,7 +786,7 @@ const HPPB=[
 				'type' => 'literal',
 				'valueColumn' => 'lang'],
 			'lv:fulltextOnline'=>[
-				'type' => 'literal',
+				'type' => 'uri',
 				'valueColumn' => 'url'],
 		],
 	],
@@ -666,6 +794,7 @@ const HPPB=[
 const CHPS=[
 	'Volume'=>[
 		'tryMerge' => true,
+		'sameSet' => true, //rechercher les items avec lesquels fusionner uniquement dans le même item_set
 		'resource_class' => 'bibo:Book',
 		'resource_template' => 'Ouvrage',
 		'item_set' => 'Volumes de la correspondance',

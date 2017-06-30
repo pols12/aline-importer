@@ -277,7 +277,11 @@ trait ImportTrait {
 			if(isset($schema['ingestUrl']) && $schema['ingestUrl']) {
 				$URLs = $schema['isImage']
 					? $this->getImages($values)
-					: [ $this->getFile($values[$schema['fileNameColumn']], false) ];
+					: (isset($schema['isPdf']) AND $schema['isPdf'])
+						? [ "http://henripoincarepapers.univ-lorraine.fr/chp/hp-pdf/{$values[$schema['fileNameColumn']]}" ]
+						: '.html'=== substr($values[$schema['fileNameColumn']], -5)
+							? [ $this->getFile($values[$schema['fileNameColumn']], 5, false) ]
+							: [ $this->getFile($values[$schema['fileNameColumn']], 0, false) ];
 				
 				if(empty($URLs)) continue;
 				
@@ -434,12 +438,16 @@ trait ImportTrait {
 	/**
 	 * Donne le contenu du fichier référencé dans la table xmlfile d’Aline sous
 	 * la clé $fileId.
-	 * @param string|null $fileId Clé dans `xmlfile` (nom du fichier sans l’extension).
+	 * @param string|null $fileName Nom du fichier
+	 * @param int $extensionSize Taille de l’extension si elle n’est pas déjà ôtée.
 	 * @return string Contenu du fichier
 	 * @throws \Exception Erreur de connexion PDO.
 	 */
-	private function getFile($fileId, $getContent=true) {
-		if(empty($fileId)) return;
+	private function getFile($fileName, $extensionSize=0, $getContent=true) {
+		if(empty($fileName)) return;
+		
+		$fileId = substr($fileName, 0, -$extensionSize);
+		
 		$sql="SELECT * FROM xmlfile WHERE file='$fileId'";
 		$statement=$this->pdo->query($sql);
 		if($statement)
