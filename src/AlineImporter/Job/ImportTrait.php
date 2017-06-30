@@ -9,11 +9,11 @@ use Omeka\Api\Representation\ResourceReference;
  * @author pols12
  */
 trait ImportTrait {
-	/* @var $pdo \PDO */
+	/** @var \PDO */
     protected $pdo;
-    /* @var $api \Omeka\Api\Manager */
+    /** @var \Omeka\Api\Manager */
 	protected $api;
-	/* @var $logger \Zend\Log\Logger */
+	/** @var \Zend\Log\Logger */
 	protected $logger;
 	
 	protected $table;
@@ -34,10 +34,11 @@ trait ImportTrait {
 		//si le schéma définit une colonne unique, et des valeurs poubelle, on les précise
 		$uniqueColumns = $this->getUniqueColumns($itemSchema);
 		$dustValues = isset($itemSchema['dustValues']) ? $itemSchema['dustValues'] : [];
+		$condition = isset($itemSchema['condition']) ? $itemSchema['condition'] : '1=1';
 
 		//On récupère les données à importer (nettoyées)
 		$valueRows = $this->getCleanedRows($itemSchema['propertySchemas'],
-				$uniqueColumns, $dustValues);
+				$uniqueColumns, $dustValues, $condition);
 
 		$this->logger->info("Requête SELECT sur Aline finalisée : "
 				.count($valueRows)." lignes récupérées.");
@@ -81,13 +82,15 @@ trait ImportTrait {
 	 * lignes, puis les retourne.
 	 * @param array $unqColumns colonnes de regroupement des lignes de la BDD,
 	 * empêchant les doublons sur cette colonne.
+	 * @param array $condition Condition SQL pour que la ligne soit retournée.
 	 * @param string $orderBy colonne d’ordonnancement des lignes de la BDD.
 	 * @return array Tableau de tableaux associatifs, un par ligne (noms de
 	 * colonnes associées aux valeurs).
 	 * @throws \Exception Problème de connexion à la BDD.
 	 */
-	private function getValuesFromAline(array $unqColumns=['id'], $orderBy='unq') {
-		$sql="SELECT *, CONCAT(".implode(",'".self::SEPARATOR."',", $unqColumns).") unq FROM {$this->table}";
+	private function getValuesFromAline(array $unqColumns=['id'], $condition='1=1', $orderBy='unq') {
+		$sql="SELECT *, CONCAT(".implode(",'".self::SEPARATOR."',", $unqColumns).") unq "
+				. "FROM {$this->table} WHERE $condition";
 		
 		//Groupement pour empêcher les doublons
 		$sql.=" GROUP BY unq";
@@ -214,10 +217,12 @@ trait ImportTrait {
 	 * @param array $schema Schéma des propriétés
 	 * @param array $uniqueColumns Colonnes où il ne doit pas y avoir de doublon.
 	 * @param array $dustValues Liste des valeurs poubelles pour $uniqueColumn.
+	 * @param array $condition Condition SQL pour que la ligne soit retournée.
 	 * @return array Lignes d’Aline moins celles sans informations.
 	 */
-	private function getCleanedRows(array $schema, array $uniqueColumns=['id'], array $dustValues=[]) {
-		$valueRows=$this->getValuesFromAline($uniqueColumns);
+	private function getCleanedRows(array $schema, array $uniqueColumns=['id'],
+			array $dustValues=[], $condition='1=1') {
+		$valueRows=$this->getValuesFromAline($uniqueColumns, $condition);
 		
 		//On passe la ligne à NULL si une valeur primordiale manque ou s’il
 		// n’y a aucune valeur utile.
@@ -648,7 +653,7 @@ trait ImportTrait {
 			}
 			
 			$results = $this->api->search('items', [
-				'item_set_id' => $newData['o:item_set'][0]['o:id'],
+				'resource_class_id' => $newData['o:resource_class']['o:id'],
 				'property'=> $searched])->getContent();
 			
 			//S’il n’y en a pas, on passe à l’entrée suivante
