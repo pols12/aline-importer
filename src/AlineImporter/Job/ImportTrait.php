@@ -634,7 +634,7 @@ trait ImportTrait {
 		foreach ($itemDataList as $key => $newData) {
 			
 			//On recherche un item qui aurait les mêmes valeurs pour les colonnes uniques
-			$searched=[];
+			$searchedProperties=[];
 			foreach($itemSchema['uniqueTerms'] as $term) {
 				$propertySchema=$newData[$term][0];
 				
@@ -645,16 +645,19 @@ trait ImportTrait {
 					$type='res';
 					$val=$propertySchema['value_resource_id'];
 				}
-				$searched[]=[
+				$searchedProperties[]=[
 					'property' => $propertySchema['property_id'],
 					'type' => $type,
 					'text' => $val
 				];
 			}
 			
-			$results = $this->api->search('items', [
-				'resource_class_id' => $newData['o:resource_class']['o:id'],
-				'property'=> $searched])->getContent();
+			$criteria=[ 'resource_class_id' => $newData['o:resource_class']['o:id'],
+				'property'=> $searchedProperties ];
+			if(isset($itemSchema['sameSet']) && $itemSchema['sameSet'])
+				$criteria+=['item_set_id' => $newData['o:item_set'][0]['o:id']];
+			
+			$results = $this->api->search('items', $criteria)->getContent();
 			
 			//S’il n’y en a pas, on passe à l’entrée suivante
 			if(count($results)===0) continue;
@@ -662,7 +665,7 @@ trait ImportTrait {
 			if(count($results)>1) $this->logger->warn(count($results)
 					." items avec les mêmes valeurs uniques ("
 					.  implode(',', $itemSchema['uniqueTerms'])
-					.") (". implode(',', array_column($searched, 'text'))
+					.") (". implode(',', array_column($searchedProperties, 'text'))
 					.") sont déjà insérés.");
 			
 			/* @var $item \Omeka\Api\Representation\ItemRepresentation */
