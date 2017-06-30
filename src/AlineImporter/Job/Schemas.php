@@ -1,6 +1,6 @@
 <?php
 
-namespace AlineImporter\Controller;
+namespace AlineImporter\Job;
 
 /**
  *
@@ -156,7 +156,7 @@ const CHP_AUTHOR=[
 				'type' => 'literal',
 				'split' => [', ', [0]],
 				'valueColumn' => 'name'],
-			'dbo:viafId' => [
+			'dcterms:identifier' => [
 				'type' => 'uri',
 				'defaultValue' => 'http://viaf.org/viaf/%s',
 				'defaultValueColumns' => ['viaf']],
@@ -173,17 +173,18 @@ const CHP_AUTHOR=[
 //	'Piege' => [], //Le piège à importation !
 ];
 const HPPB=[
-	'Auteur'=>[ //À isoler avant !
+	'Auteur'=>[
+		'tryMerge' => true,
 		'resource_class' => 'foaf:Person',
-		'resource_template' => 'Auteur',
+		'resource_template' => 'Correspondant',
 		'item_set' => 'Auteurs de publications',
 		'persist_column' => 'auteurOId',
 		'uniqueTerms' => ['dcterms:title'],
-		'dustValues' => [[NULL, '']],
+		'dustValues' => [[], [NULL, '']],
 		'propertySchemas'=> [
 			'dcterms:title'=>[ //Prénom Nom
 				'type' => 'literal',
-				'defaultValue' => '%s %s',
+				'defaultValue' => '%2$s %1$s',
 				'defaultValueColumns' => ['fn', 'ln']],
 			'foaf:givenName' => [
 				'type' => 'literal',
@@ -195,7 +196,7 @@ const HPPB=[
 	],
 	'Auteur1'=>[ //À isoler avant !
 		'resource_class' => 'foaf:Person',
-		'resource_template' => 'Auteur',
+		'resource_template' => 'Correspondant',
 		'item_set' => 'Auteurs de publications',
 		'persist_column' => 'auteur1OId',
 		'uniqueTerms' => ['dcterms:title'],
@@ -218,7 +219,7 @@ const HPPB=[
 	],
 	'Auteur2'=>[ //À isoler avant !
 		'resource_class' => 'foaf:Person',
-		'resource_template' => 'Auteur',
+		'resource_template' => 'Correspondant',
 		'item_set' => 'Auteurs de publications',
 		'persist_column' => 'auteur2OId',
 		'uniqueTerms' => ['dcterms:title'],
@@ -241,15 +242,15 @@ const HPPB=[
 	],
 	'Rédacteur'=>[
 		'resource_class' => 'foaf:Person',
-		'resource_template' => 'Auteur',
+		'resource_template' => 'Correspondant',
 		'item_set' => 'Rédacteurs de publications',
 		'persist_column' => 'rédacteurOId',
 		'uniqueTerms' => ['dcterms:title'],
-		'dustValues' => [[NULL, '']],
+		'dustValues' => [[], [NULL, '']],
 		'propertySchemas'=> [
 			'dcterms:title'=>[ //Prénom Nom
 				'type' => 'literal',
-				'defaultValue' => '%s %s',
+				'defaultValue' => '%2$s %1$s',
 				'defaultValueColumns' => ['ef', 'el']],
 			'foaf:givenName' => [
 				'type' => 'literal',
@@ -261,7 +262,7 @@ const HPPB=[
 	],
 	'Rédacteur1'=>[ //À isoler avant ! à dupliquer en 7 fois !!!
 		'resource_class' => 'foaf:Person',
-		'resource_template' => 'Auteur',
+		'resource_template' => 'Correspondant',
 		'item_set' => 'Rédacteurs de publications',
 		'persist_column' => 'rédacteur1OId',
 		'uniqueTerms' => ['dcterms:title'],
@@ -283,7 +284,7 @@ const HPPB=[
 	],
 	'Rédacteur2'=>[ //À isoler avant !
 		'resource_class' => 'foaf:Person',
-		'resource_template' => 'Auteur',
+		'resource_template' => 'Correspondant',
 		'item_set' => 'Rédacteurs de publications',
 		'persist_column' => 'rédacteur2OId',
 		'uniqueTerms' => ['dcterms:title'],
@@ -305,7 +306,7 @@ const HPPB=[
 	],
 	'Rédacteur3'=>[ //À isoler avant !
 		'resource_class' => 'foaf:Person',
-		'resource_template' => 'Auteur',
+		'resource_template' => 'Correspondant',
 		'item_set' => 'Rédacteurs de publications',
 		'persist_column' => 'rédacteur3OId',
 		'uniqueTerms' => ['dcterms:title'],
@@ -327,7 +328,7 @@ const HPPB=[
 	],
 	'Rédacteur4'=>[ //À isoler avant !
 		'resource_class' => 'foaf:Person',
-		'resource_template' => 'Auteur',
+		'resource_template' => 'Correspondant',
 		'item_set' => 'Rédacteurs de publications',
 		'persist_column' => 'rédacteur4OId',
 		'uniqueTerms' => ['dcterms:title'],
@@ -349,7 +350,7 @@ const HPPB=[
 	],
 	'Rédacteur5'=>[ //À isoler avant !
 		'resource_class' => 'foaf:Person',
-		'resource_template' => 'Auteur',
+		'resource_template' => 'Correspondant',
 		'item_set' => 'Rédacteurs de publications',
 		'persist_column' => 'rédacteur5OId',
 		'uniqueTerms' => ['dcterms:title'],
@@ -371,7 +372,7 @@ const HPPB=[
 	],
 	'Rédacteur6'=>[ //À isoler avant !
 		'resource_class' => 'foaf:Person',
-		'resource_template' => 'Auteur',
+		'resource_template' => 'Correspondant',
 		'item_set' => 'Rédacteurs de publications',
 		'persist_column' => 'rédacteur6OId',
 		'uniqueTerms' => ['dcterms:title'],
@@ -393,7 +394,7 @@ const HPPB=[
 	],
 	'Rédacteur7'=>[ //À isoler avant !
 		'resource_class' => 'foaf:Person',
-		'resource_template' => 'Auteur',
+		'resource_template' => 'Correspondant',
 		'item_set' => 'Rédacteurs de publications',
 		'persist_column' => 'rédacteur7OId',
 		'uniqueTerms' => ['dcterms:title'],
@@ -414,88 +415,251 @@ const HPPB=[
 		],
 	],
 	'Ville d’édition'=>[
-		'resource_class' => 'bibo:Book',
-		'resource_template' => 'Ouvrage',
-		'item_set' => 'Volumes de la correspondance',
-		'persist_column' => 'volumeOId',
-		'uniqueTerms' => ['bibo:volume'],
-		'dustValues' => [[NULL]],
+		'resource_class' => 'locn:Address',
+		'resource_template' => 'Adresse',
+		'item_set' => 'Adresses des éditeurs',
+		'persist_column' => 'villeeditionOId',
+		'uniqueTerms' => ['dcterms:title'],
 		'propertySchemas'=> [
 			'dcterms:title'=>[
 				'type' => 'literal',
-				'defaultValue' => 'La Correspondance entre Henri Poincaré et... – Volume %s',
-				'defaultValueColumns' => ['vol']],
-			'bibo:volume'=>[
+				'defaultValue' => 'Adresse de %s',
+				'defaultValueColumns' => ['pb']],
+			'locn:postName' => [
 				'type' => 'literal',
-				'valueColumn' => 'vol'],
+				'valueColumn' => 'city'],
 		],
 	],
 	'Éditeur'=>[
-		'resource_class' => 'bibo:Book',
-		'resource_template' => 'Ouvrage',
-		'item_set' => 'Volumes de la correspondance',
-		'persist_column' => 'volumeOId',
-		'uniqueTerms' => ['bibo:volume'],
+		'resource_class' => 'foaf:Organization', //Peut faire mieux
+		'resource_template' => 'Organisation',
+		'item_set' => 'Éditeurs des publications de Poincaré',
+		'persist_column' => 'editeurOId',
+		'uniqueTerms' => ['dcterms:title'],
 		'dustValues' => [[NULL]],
 		'propertySchemas'=> [
 			'dcterms:title'=>[
 				'type' => 'literal',
-				'defaultValue' => 'La Correspondance entre Henri Poincaré et... – Volume %s',
-				'defaultValueColumns' => ['vol']],
-			'bibo:volume'=>[
-				'type' => 'literal',
-				'valueColumn' => 'vol'],
+				'valueColumn' => 'pb'],
+			'locn:address'=>[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Ville d’édition'],
 		],
 	],
-	'Journal ou Collection'=>[
-		'resource_class' => 'bibo:Book',
-		'resource_template' => 'Ouvrage',
-		'item_set' => 'Volumes de la correspondance',
-		'persist_column' => 'volumeOId',
-		'uniqueTerms' => ['bibo:volume'],
+	'Journal'=>[
+		'condition' => "bk IS NULL OR bk=''",
+		'resource_class' => 'bibo:Journal',
+		'resource_template' => 'Journal',
+		'item_set' => 'Journaux ayant publié Poincaré',
+		'persist_column' => 'journalOId',
+		'uniqueTerms' => ['dcterms:title'],
 		'dustValues' => [[NULL]],
 		'propertySchemas'=> [
 			'dcterms:title'=>[
 				'type' => 'literal',
-				'defaultValue' => 'La Correspondance entre Henri Poincaré et... – Volume %s',
-				'defaultValueColumns' => ['vol']],
-			'bibo:volume'=>[
-				'type' => 'literal',
-				'valueColumn' => 'vol'],
+				'valueColumn' => 'jo'],
+			'dcterms:publisher'=>[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Éditeur'],
 		],
 	],
-	'Auteur'=>[
-		'resource_class' => 'bibo:Book',
-		'resource_template' => 'Ouvrage',
-		'item_set' => 'Volumes de la correspondance',
-		'persist_column' => 'volumeOId',
-		'uniqueTerms' => ['bibo:volume'],
+	'Collection'=>[
+		'condition' => "bk IS NOT NULL AND bk!=''",
+		'resource_class' => 'bibo:Collection',
+		'resource_template' => 'Collection',
+		'item_set' => 'Collections des ouvrages de Poincaré',
+		'persist_column' => 'collectionOId',
+		'uniqueTerms' => ['dcterms:title'],
 		'dustValues' => [[NULL]],
 		'propertySchemas'=> [
 			'dcterms:title'=>[
 				'type' => 'literal',
-				'defaultValue' => 'La Correspondance entre Henri Poincaré et... – Volume %s',
-				'defaultValueColumns' => ['vol']],
-			'bibo:volume'=>[
-				'type' => 'literal',
-				'valueColumn' => 'vol'],
+				'valueColumn' => 'jo'],
 		],
 	],
-	'Publication'=>[
-		'resource_class' => 'bibo:Book',
+	'Numéro'=>[
+		'condition' => "bk IS NULL OR bk=''",
+		'resource_class' => 'bibo:Issue',
 		'resource_template' => 'Ouvrage',
-		'item_set' => 'Volumes de la correspondance',
-		'persist_column' => 'volumeOId',
-		'uniqueTerms' => ['bibo:volume'],
-		'dustValues' => [[NULL]],
+		'item_set' => 'Numéros des journaux ayant publié Poincaré',
+		'persist_column' => 'numeroOId',
+		'uniqueTerms' => ['dcterms:title', 'bibo:volume'],
+		'dustValues' => [[NULL, ''], [NULL], [NULL]],
 		'propertySchemas'=> [
 			'dcterms:title'=>[
 				'type' => 'literal',
-				'defaultValue' => 'La Correspondance entre Henri Poincaré et... – Volume %s',
-				'defaultValueColumns' => ['vol']],
+				'defaultValue' => '%s – N° %s',
+				'defaultValueColumns' => ['jo', 'no']],
+			'dcterms:issued'=>[
+				'type' => 'literal',
+				'valueColumn' => 'yr'],
 			'bibo:volume'=>[
 				'type' => 'literal',
-				'valueColumn' => 'vol'],
+				'valueColumn' => 'vo'],
+			'dcterms:isPartOf'=>[ //à revoir
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Journal'],
+		],
+	],
+	'Ouvrage'=>[ 
+		'condition' => "bk IS NOT NULL AND bk!=''",
+		'resource_class' => 'bibo:Book',
+		'resource_template' => 'Ouvrage',
+		'item_set' => 'Ouvrages de Poincaré',
+		'persist_column' => 'ouvrageOId',
+		'uniqueTerms' => ['dcterms:title','dcterms:issued'],
+		'dustValues' => [[NULL],[]],
+		'propertySchemas'=> [
+			'dcterms:title'=>[
+				'type' => 'literal',
+				'valueColumn' => 'bk'],
+			'bibo:volume'=>[
+				'type' => 'literal',
+				'valueColumn' => 'vo'],
+			'dcterms:identifier'=>[
+				'type' => 'literal',
+				'valueColumn' => 'bibkey'],
+			'dcterms:issued'=>[
+				'type' => 'literal',
+				'valueColumn' => 'yr'],
+			'dcterms:creator'=>[
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Auteur'],
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Auteur1'],
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Auteur2'],],
+			'dcterms:isPartOf'=>[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Collection'],
+			'bibo:numPages'=>[
+				'type' => 'literal',
+				'valueColumn' => 'pp'],
+			'dcterms:language'=>[
+				'type' => 'literal',
+				'valueColumn' => 'lang'],
+			'bibo:editor'=>[
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Rédacteur'],
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Rédacteur1'],
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Rédacteur2'],
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Rédacteur3'],
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Rédacteur4'],
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Rédacteur5'],
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Rédacteur6'],
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Rédacteur7']],
+			'lv:fulltextOnline'=>[
+				'type' => 'literal',
+				'valueColumn' => 'url'],
+			'bibo:numVolumes'=>[
+				'type' => 'literal',
+				'valueColumn' => 'vols'],
+			'bibo:edition'=>[
+				'type' => 'literal',
+				'valueColumn' => 'edn'],
+			'dcterms:publisher'=>[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Éditeur'],
+		],
+	],
+	'Article'=>[
+		'condition' => "art IS NOT NULL",
+		'resource_class' => 'bibo:Article',
+		'resource_template' => 'Article',
+		'item_set' => 'Articles de Poincaré',
+		'persist_column' => 'articleOId',
+		'uniqueTerms' => ['dcterms:identifier'],
+		'dustValues' => [[NULL]],
+		'medias' => [
+			'Notes' => [
+				'public' => false,
+				'valueColumn' => 'nt',
+				'propertySchemas' => [
+					'dcterms:title'=>[
+						'type' => 'literal',
+						'defaultValue' => 'Remarques',
+						'defaultValueColumns' => []],
+				]
+			]
+		],
+		'propertySchemas'=> [
+			'dcterms:title'=>[
+				'type' => 'literal',
+				'valueColumn' => 'art'],
+			'bibo:volume'=>[
+				'type' => 'literal',
+				'valueColumn' => 'vo'],
+			'dcterms:identifier'=>[
+				'type' => 'literal',
+				'valueColumn' => 'bibkey'],
+			'dcterms:creator'=>[
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Auteur'],
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Auteur1'],
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Auteur2'],],
+			'dcterms:isPartOf'=>[
+				[//soit c’est un article de journal
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Numéro'],
+				[//soit c’est un article dans un ouvrage
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Ouvrage']], 
+			'bibo:pageStart'=>[
+				'type' => 'literal',
+				'valueColumn' => 'pg'],
+			'bibo:pageEnd'=>[
+				'type' => 'literal',
+				'valueColumn' => 'pgend'],
+			'dcterms:language'=>[
+				'type' => 'literal',
+				'valueColumn' => 'lang'],
+			'lv:fulltextOnline'=>[
+				'type' => 'literal',
+				'valueColumn' => 'url'],
 		],
 	],
 ];

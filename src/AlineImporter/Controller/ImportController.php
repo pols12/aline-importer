@@ -28,9 +28,8 @@ class ImportController extends AbstractActionController {
     public function importAction() {
 		//Lancement de l’importation
 		/* @var $job \Omeka\Entity\Job */
-		$job = $this->jobDispatcher()->dispatch(Import::class, ['table'=>'archives']);
-//		$job = $this->jobDispatcher()->dispatch(Import::class, ['table'=>'chp_author']);
-//		$job = $this->jobDispatcher()->dispatch(Import::class, ['table'=>'chps']);
+		$table='hppb';
+		$job = $this->jobDispatcher()->dispatch(Import::class, ['table'=>$table]);
 		
 		//Lancement de l’import sans utiliser de Job (lorsque php-cli n’est pas dispo)
 //		$job = new ImportTask('archives',$this->api,$this->logger, $this->pdo);
