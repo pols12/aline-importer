@@ -66,7 +66,8 @@ trait ImportTrait {
 		//Tableau associant aux clés de $itemDataList les ResourceReference des items créés
 		$itemReferences =
 			$this->tryMerge($itemSchema, $itemDataList) //Mise à jour des items déjà présents
-			+ $this->api->batchCreate('items', $itemDataList)->getContent(); //Création des autres items
+			+ $this->api->batchCreate('items', $itemDataList, [], ['continueOnError'=>true])
+				->getContent(); //Création des autres items
 
 		$this->logger->info(count($itemReferences)." items ont été créés.");
 
