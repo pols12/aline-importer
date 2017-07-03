@@ -89,7 +89,8 @@ trait ImportTrait {
 	 * @throws \Exception Problème de connexion à la BDD.
 	 */
 	private function getValuesFromAline(array $unqColumns=['id'], $condition='1=1', $orderBy='unq') {
-		$sql="SELECT *, CONCAT(".implode(",'".self::SEPARATOR."',", $unqColumns).") unq "
+		$sql="SELECT *, CONCAT(IFNULL("
+				.implode(",''),'".self::SEPARATOR."',IFNULL(", $unqColumns).",'')) unq "
 				. "FROM {$this->table} WHERE $condition";
 		
 		//Groupement pour empêcher les doublons
@@ -353,9 +354,9 @@ trait ImportTrait {
 		foreach ($itemReferences as $uniqueValuesStr => $item) {
 			$uniqueValues = explode(self::SEPARATOR, $uniqueValuesStr);
 			
-			$sql="UPDATE `$this->table` SET `$column`='{$item->id()}' WHERE $uniqueColumns[0]=?";
+			$sql="UPDATE `$this->table` SET `$column`='{$item->id()}' WHERE IFNULL(`$uniqueColumns[0]`,'')=?";
 			for($i=1; $i<count($uniqueValues); $i++)
-				$sql.=" AND $uniqueColumns[$i]=?";
+				$sql.=" AND IFNULL(`$uniqueColumns[$i]`,'')=?";
 			
 			$statement = $this->pdo->prepare($sql);
 			
