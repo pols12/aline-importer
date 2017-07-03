@@ -505,7 +505,9 @@ trait ImportTrait {
 			$columnValues=array_intersect_key( $values,
 					array_flip($schema['defaultValueColumns']) );
 			
-			$empty=true;
+			//Si aucune colonne n’a été spécifiée le texte est donné par la config ($empty=false)
+			//sinon, on s’assure qu’au moins une colonne n’est pas vide
+			$empty=!empty($columnValues);
 			foreach ($columnValues as $columnValue)
 				if(!empty($columnValue)) $empty=false;
 			
@@ -562,8 +564,8 @@ trait ImportTrait {
 					$uniqueColumns[]=$col;
 			else
 			$uniqueColumns[] = isset($propertySchema['valueColumn'])
-					? $propertySchema['valueColumn']
-					: constant('self::'.strtoupper($propertySchema['foreignTable']))
+					? $propertySchema['valueColumn'] //type=literal
+					: constant('self::'.strtoupper($propertySchema['foreignTable'])) //type=resource
 						[$propertySchema['schemaIndex']] ['persist_column'] ;
 		}
 		return $uniqueColumns;
