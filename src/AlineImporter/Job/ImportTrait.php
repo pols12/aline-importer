@@ -117,8 +117,9 @@ trait ImportTrait {
 	/**
 	 * Retourne le JSON-LD des propriétés de $schema associées aux valeurs
 	 * de $values.
-	 * @param array $schemas
-	 * @param array $values
+	 * @param array $schemas Liste des schémas des propriétés
+	 * @param array $values Ligne de la BDD associant à chaque nom de colonne sa
+	 * valeur.
 	 * @return array Tableau JSON-LD compatible listant les propriétés et leurs
 	 * valeurs.
 	 */
@@ -129,6 +130,9 @@ trait ImportTrait {
 				$properties[$term]=$this->getPropertiesArray($schema, $values, true);
 				continue;
 			}
+			if(isset($schema['nullPropertyRequired']) //si la propriété requise
+					&& !empty($properties[$schema['nullPropertyRequired']])) //a une valeur
+				continue; //alors on n’ajoute pas cette propriété
 			$data=$schema;
 			switch ($data['type']){
 				case 'uri':

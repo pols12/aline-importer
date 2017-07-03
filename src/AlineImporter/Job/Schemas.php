@@ -758,9 +758,6 @@ const HPPB=[
 			'dcterms:title'=>[
 				'type' => 'literal',
 				'valueColumn' => 'art'],
-			'bibo:volume'=>[
-				'type' => 'literal',
-				'valueColumn' => 'vo'],
 			'dcterms:identifier'=>[
 				'type' => 'literal',
 				'valueColumn' => 'bibkey'],
@@ -781,7 +778,12 @@ const HPPB=[
 				[//soit c’est un article de journal
 				'type' => 'resource',
 				'foreignTable' => 'hppb',
-				'schemaIndex' => 'Numéro'],
+				'schemaIndex' => 'Numéro'], //on a créé un item pour ce numéro de journal
+				[
+				'nullPropertyRequired' => 0, //cette propriété est ajoutée uniquement si la propriété d’index 0 est vide
+				'type' => 'resource',
+				'foreignTable' => 'hppb',
+				'schemaIndex' => 'Journal'],
 				[//soit c’est un article dans un ouvrage
 				'type' => 'resource',
 				'foreignTable' => 'hppb',
