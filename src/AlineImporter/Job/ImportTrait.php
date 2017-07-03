@@ -274,14 +274,23 @@ trait ImportTrait {
 			//On prépare le schéma des propriétés
 			$this->setSchemaPropertyIds($schema['propertySchemas']);
 			
-			if(isset($schema['ingestUrl']) && $schema['ingestUrl']) {
-				$URLs = $schema['isImage']
-					? $this->getImages($values)
-					: (isset($schema['isPdf']) AND $schema['isPdf'])
-						? [ "http://henripoincarepapers.univ-lorraine.fr/chp/hp-pdf/{$values[$schema['fileNameColumn']]}" ]
-						: '.html'=== substr($values[$schema['fileNameColumn']], -5)
-							? [ $this->getFile($values[$schema['fileNameColumn']], 5, false) ]
-							: [ $this->getFile($values[$schema['fileNameColumn']], 0, false) ];
+			if('text' !== $schema['ingest']) {
+				switch($schema['ingest']){
+					case 'images':
+						$URLs = $this->getImages($values);
+						break;
+					case 'PDF':
+						$fileName=$values[$schema['fileNameColumn']];
+						$URLs=empty($fileName) ? []
+								: [ "http://henripoincarepapers.univ-lorraine.fr/chp/hp-pdf/$fileName" ];
+						break;
+					case 'HTML':
+						$fileName=$values[$schema['fileNameColumn']];
+						$URLs = '.html'=== substr($fileName, -5)
+							? [ $this->getFile($fileName, 5, false) ]
+							: [ $this->getFile($fileName, 0, false) ];
+						break;
+				}
 				
 				if(empty($URLs)) continue;
 				
