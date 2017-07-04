@@ -489,7 +489,7 @@ trait ImportTrait {
 				||$values['imgdir']=='pro')
 			return [];
 		
-		$pages=empty($values['ext'])
+		$pages=empty($values['ext']) && 1!=$values['imgno']
 				? range(-1, -$values['imgno'])
 				: explode(':',$values['ext']);
 		
