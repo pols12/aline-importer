@@ -314,7 +314,7 @@ trait ImportTrait {
 					
 					//Modification du titre pour préciser le numéro de page
 					$mediaData[$i]['dcterms:title'][0]['@value']
-							= str_replace('?', $i+1, $mediaData[$i]['dcterms:title'][0]['@value']);
+							= str_replace(['?1', '?t'], [$i+1, count($URLs)], $mediaData[$i]['dcterms:title'][0]['@value']);
 					$i++;
 				}
 			} else {
