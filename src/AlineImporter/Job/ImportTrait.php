@@ -292,9 +292,10 @@ trait ImportTrait {
 						break;
 					case 'HTML':
 						$fileName=$values[$schema['fileNameColumn']];
-						$URLs = '.html'=== substr($fileName, -5)
-							? [ $this->getFile($fileName, 5, false) ]
-							: [ $this->getFile($fileName, 0, false) ];
+						$fileId= '.html'=== substr($fileName, -5)
+								? substr($fileName, 0, -5)
+								: $fileName;
+						$URLs = [ $this->getFile($fileId, false) ];
 						break;
 				}
 				
@@ -451,17 +452,17 @@ trait ImportTrait {
 	}
 
 	/**
-	 * Donne le contenu du fichier référencé dans la table xmlfile d’Aline sous
-	 * la clé $fileId.
-	 * @param string|null $fileName Nom du fichier
-	 * @param int $extensionSize Taille de l’extension si elle n’est pas déjà ôtée.
-	 * @return string Contenu du fichier
+	 * Donne le contenu ou le nom du fichier référencé dans la table xmlfile 
+	 * d’Aline sous la clé $fileId.
+	 * @param string|null $fileId Nom du fichier sans l’extension (clé dans
+	 * la table `xmlfile`).
+	 * @param bool $getContent Vrai s’il faut renvoyer le contenu du fichier,
+	 * faux s’il faut seulement renvoyer son nom.
+	 * @return string Contenu ou nom du fichier (selon $getContent).
 	 * @throws \Exception Erreur de connexion PDO.
 	 */
-	private function getFile($fileName, $extensionSize=0, $getContent=true) {
-		if(empty($fileName)) return;
-		
-		$fileId = substr($fileName, 0, -$extensionSize);
+	private function getFile($fileId, $getContent=true) {
+		if(empty($fileId)) return;
 		
 		$sql="SELECT * FROM xmlfile WHERE file='$fileId'";
 		$statement=$this->pdo->query($sql);
