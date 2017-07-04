@@ -1001,7 +1001,7 @@ const CHPS=[
 			'dm2e:incipit'=>[
 				'type' => 'literal',
 				'valueColumn' => 'opng'],
-			'dcterms:date'=>[
+			'dcterms:created'=>[
 				[
 				'type' => 'literal',
 				'valueColumn' => 'date'],
@@ -1103,5 +1103,72 @@ const CHPS=[
 				'valueColumn' => 'url'],
 		]
 	] */
+];
+const HPP_MISC= [
+	'Volume'=>[
+		'tryMerge' => true,
+		'sameSet' => true, //rechercher les items avec lesquels fusionner uniquement dans le même item_set
+		'resource_class' => 'bibo:Book',
+		'resource_template' => 'Ouvrage',
+		'item_set' => 'Volumes de la correspondance',
+		'persist_column' => 'volumeOId',
+		'uniqueTerms' => ['bibo:volume'],
+		'dustValues' => [[NULL]],
+		'propertySchemas'=> [
+			'dcterms:title'=>[
+				'type' => 'literal',
+				'defaultValue' => 'La Correspondance entre Henri Poincaré et... – Volume %s',
+				'defaultValueColumns' => ['vo']],
+			'bibo:volume'=>[
+				'type' => 'literal',
+				'valueColumn' => 'vo'],
+		],
+	],
+	'Commentaire'=>[ //Ouvrage contenant des articles
+		'resource_class' => 'bibo:Article',
+		'resource_template' => 'Commentaire',
+		'item_set' => 'Commentaires de l’édition de la correspondance',
+		'persist_column' => 'commentaireOId',
+		'uniqueTerms' => ['dcterms:title','dcterms:created'],
+		'medias' => [
+			'Fichier' => [
+				'public' => true,
+				'fileNameColumn' => 'texfile',
+				'ingest' => 'HTML',
+				'propertySchemas'=> [
+					'dcterms:title' => [
+						'type' => 'literal',
+						'defaultValue' => '%s (HTML)',
+						'defaultValueColumns' => ['title']],
+				],
+			],
+			'Auteur' => [
+				'public' => false,
+				'valueColumn' => 'author',
+				'ingest' => 'text',
+				'propertySchemas' => [
+					'dcterms:title'=>[
+						'type' => 'literal',
+						'defaultValue' => 'Auteur du fichier',
+						'defaultValueColumns' => []],
+				]
+			]
+		],
+		'propertySchemas'=> [
+			'dcterms:title'=>[
+				'type' => 'literal',
+				'valueColumn' => 'title'],
+			'dcterms:created'=>[
+				'type' => 'literal',
+				'valueColumn' => 'date'],
+			'dcterms:isPartOf'=>[
+				'type' => 'resource',
+				'foreignTable' => 'hpp_misc',
+				'schemaIndex' => 'Volume'],
+			'dcterms:language'=>[
+				'type' => 'literal',
+				'valueColumn' => 'lang'],
+		],
+	],
 ];
 }
