@@ -1171,4 +1171,177 @@ const HPP_MISC= [
 		],
 	],
 ];
+const HPRPTPHD = [
+	'Volume'=>[
+		'tryMerge' => true,
+		'sameSet' => true, //rechercher les items avec lesquels fusionner uniquement dans le même item_set
+		'resource_class' => 'bibo:Book',
+		'resource_template' => 'Ouvrage',
+		'item_set' => 'Volumes de la correspondance',
+		'persist_column' => 'volumeOId',
+		'uniqueTerms' => ['bibo:volume'],
+		'dustValues' => [[NULL]],
+		'propertySchemas'=> [
+			'dcterms:title'=>[
+				'type' => 'literal',
+				'defaultValue' => 'La Correspondance entre Henri Poincaré et... – Volume %s',
+				'defaultValueColumns' => ['vo']],
+			'bibo:volume'=>[
+				'type' => 'literal',
+				'valueColumn' => 'vo'],
+		],
+	],
+	'Candidat'=>[
+		'tryMerge' => true,
+		'resource_class' => 'foaf:Person',
+		'resource_template' => 'Correspondant',
+		'item_set' => 'Doctorants',
+		'persist_column' => 'doctorantOId',
+		'uniqueTerms' => ['dcterms:title'],
+		'medias' => [
+			'Biographie'=>[
+				'public' => true,
+				'ingest' => 'text',
+				'fileNameColumn' => 'biofile',
+				'propertySchemas'=> [
+					'dcterms:title' => [
+						'type' => 'literal',
+						'defaultValue' => 'Biographie de %2$s %1$s',
+						'defaultValueColumns' => ['fncand', 'lncand']],
+				],
+			],
+		],
+		'propertySchemas'=> [
+			'dcterms:title' => [
+				'type' => 'literal',
+				'defaultValue' => '%2$s %1$s',
+				'defaultValueColumns' => ['fncand', 'lncand']],
+			'foaf:givenName' => [
+				'type' => 'literal',
+				'valueColumn' => 'fncand'],
+			'foaf:familyName' => [
+				'type' => 'literal',
+				'valueColumn' => 'lncand'],
+		],
+	],
+	'Auteur'=>[
+		'tryMerge' => true,
+		'resource_class' => 'foaf:Person',
+		'resource_template' => 'Correspondant',
+		'item_set' => 'Auteurs de rapports de thèse',
+		'persist_column' => 'auteurOId',
+		'uniqueTerms' => ['dcterms:title'],
+		'propertySchemas'=> [
+			'dcterms:title' => [
+				'type' => 'literal',
+				'defaultValue' => '%2$s %1$s',
+				'defaultValueColumns' => ['fn', 'ln']],
+			'foaf:givenName' => [
+				'type' => 'literal',
+				'valueColumn' => 'fn'],
+			'foaf:familyName' => [
+				'type' => 'literal',
+				'valueColumn' => 'ln'],
+		],
+	],
+	'Thèse' => [
+		'resource_class' => 'bibo:Thesis',
+		'resource_template' => 'Ouvrage',
+		'item_set' => 'Thèses',
+		'persist_column' => 'theseOId',
+		'uniqueTerms' => ['dcterms:title'],
+		'propertySchemas'=> [
+			'dcterms:title'=>[
+				'type' => 'literal',
+				'valueColumn' => 'phdtitle'],
+			'dcterms:creator'=>[
+				'type' => 'resource',
+				'foreignTable' => 'hprptphd',
+				'schemaIndex' => 'Candidat'],
+			'gndo:dateOfConferenceOrEvent'=>[
+				'type' => 'literal',
+				'valueColumn' => 'sdate'],
+			'bibo:numPages'=>[
+				'type' => 'literal',
+				'valueColumn' => 'pp',
+				'dustValues' => [0]],
+		]
+	],
+	'Rapport de thèse' => [
+		'condition' => 'txtpub!=0',
+		'resource_class' => 'bibo:Report',
+		'resource_template' => 'Lettre',
+		'item_set' => 'Rapports de thèse',
+		'persist_column' => 'rapportOId',
+		'medias' => [
+			'Transcription' => [
+				'public' => true,
+				'fileNameColumn' => 'texfile',
+				'ingest' => 'HTML',
+				'propertySchemas'=> [
+					'dcterms:title' => [
+						'type' => 'literal',
+						'defaultValue' => 'Transcription du rapport',
+						'defaultValueColumns' => []],
+				],
+			],
+			'Notes' => [
+				'public' => false,
+				'valueColumn' => 'nt',
+				'ingest' => 'text',
+				'propertySchemas' => [
+					'dcterms:title'=>[
+						'type' => 'literal',
+						'defaultValue' => 'Remarques sur le document',
+						'defaultValueColumns' => []],
+				]
+			]
+		],
+		'propertySchemas'=> [
+			'dcterms:title'=>[
+				'type' => 'literal',
+				'valueColumn' => 'title'],
+			'dm2e:incipit'=>[
+				'type' => 'literal',
+				'valueColumn' => 'opng'],
+			'dcterms:created'=>[
+				'type' => 'literal',
+				'valueColumn' => 'date'],
+			'dcterms:isPartOf'=>[
+				[ //Publication, à revoir
+				'type' => 'literal',
+				'valueColumn' => 'pb'],
+				[
+				'type' => 'resource',
+				'foreignTable' => 'hprptphd',
+				'schemaIndex' => 'Volume'],
+				[ //endroit dans les archives, à revoir
+				'type' => 'literal',
+				'valueColumn' => 'ident'],
+				[ //à revoir, curate=conserver
+				'type' => 'resource',
+				'foreignTable' => 'archives',
+				'schemaIndex' => 'Lieu d’archives',
+				'foreignKeyColumn' => 'scid'],],
+			'dcterms:language'=>[
+				'type' => 'literal',
+				'valueColumn' => 'lang'],
+			'dcterms:identifier'=>[
+				'type' => 'literal',
+				'valueColumn' => 'bibkey'],
+			'dcterms:type'=>[ //à revoir
+				'type' => 'literal',
+				'valueColumn' => 'type'],
+			'dm2e:writer'=>[
+				'type' => 'resource',
+				'foreignTable' => 'hprptphd',
+				'schemaIndex' => 'Auteur'],
+			'dcterms:subject'=>[
+				'type' => 'resource',
+				'foreignTable' => 'hprptphd',
+				'schemaIndex' => 'Thèse'],
+		]
+	],
+//expsite		='Paris' (ebucore:hasCreationLocation ? pour la thèse ou le rapport ?)
+];
 }

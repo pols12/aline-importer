@@ -596,7 +596,23 @@ trait ImportTrait {
 			case 'hppb':
 				$this->cutColumn('a2', 2, 'Coauteur');
 				$this->cutColumn('e2', 7, 'Rédacteur');
+				break;
+			case 'hprptphd':
+				$this->execRequest("UPDATE hprptphd SET scid=7 WHERE sc='Archives nationales françaises'");
+				break;
 		}
+	}
+	
+	/**
+	 * Exécute la requête donnée en paramètre.
+	 * @param string $sql
+	 * @throws \Exception
+	 */
+	private function execRequest($sql) {
+		$statement = $this->pdo->prepare($sql);
+			
+		if(false === $statement->execute())
+			throw new \Exception(print_r($this->pdo->errorInfo(), true));
 	}
 
 	/**
