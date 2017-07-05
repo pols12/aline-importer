@@ -196,6 +196,7 @@ const HPPB=[
 		],
 	],
 	'Auteur1'=>[ //À isoler avant !
+		'tryMerge' => true,
 		'resource_class' => 'foaf:Person',
 		'resource_template' => 'Correspondant',
 		'item_set' => 'Auteurs de publications',
@@ -219,6 +220,7 @@ const HPPB=[
 		],
 	],
 	'Auteur2'=>[ //À isoler avant !
+		'tryMerge' => true,
 		'resource_class' => 'foaf:Person',
 		'resource_template' => 'Correspondant',
 		'item_set' => 'Auteurs de publications',
@@ -242,6 +244,7 @@ const HPPB=[
 		],
 	],
 	'Rédacteur'=>[
+		'tryMerge' => true,
 		'resource_class' => 'foaf:Person',
 		'resource_template' => 'Correspondant',
 		'item_set' => 'Rédacteurs de publications',
@@ -261,7 +264,8 @@ const HPPB=[
 				'valueColumn' => 'el'],
 		],
 	],
-	'Rédacteur1'=>[ //À isoler avant ! à dupliquer en 7 fois !!!
+	'Rédacteur1'=>[ //À isoler avant
+		'tryMerge' => true,
 		'resource_class' => 'foaf:Person',
 		'resource_template' => 'Correspondant',
 		'item_set' => 'Rédacteurs de publications',
@@ -284,6 +288,7 @@ const HPPB=[
 		],
 	],
 	'Rédacteur2'=>[ //À isoler avant !
+		'tryMerge' => true,
 		'resource_class' => 'foaf:Person',
 		'resource_template' => 'Correspondant',
 		'item_set' => 'Rédacteurs de publications',
@@ -306,6 +311,7 @@ const HPPB=[
 		],
 	],
 	'Rédacteur3'=>[ //À isoler avant !
+		'tryMerge' => true,
 		'resource_class' => 'foaf:Person',
 		'resource_template' => 'Correspondant',
 		'item_set' => 'Rédacteurs de publications',
@@ -328,6 +334,7 @@ const HPPB=[
 		],
 	],
 	'Rédacteur4'=>[ //À isoler avant !
+		'tryMerge' => true,
 		'resource_class' => 'foaf:Person',
 		'resource_template' => 'Correspondant',
 		'item_set' => 'Rédacteurs de publications',
@@ -350,6 +357,7 @@ const HPPB=[
 		],
 	],
 	'Rédacteur5'=>[ //À isoler avant !
+		'tryMerge' => true,
 		'resource_class' => 'foaf:Person',
 		'resource_template' => 'Correspondant',
 		'item_set' => 'Rédacteurs de publications',
@@ -372,6 +380,7 @@ const HPPB=[
 		],
 	],
 	'Rédacteur6'=>[ //À isoler avant !
+		'tryMerge' => true,
 		'resource_class' => 'foaf:Person',
 		'resource_template' => 'Correspondant',
 		'item_set' => 'Rédacteurs de publications',
@@ -394,6 +403,7 @@ const HPPB=[
 		],
 	],
 	'Rédacteur7'=>[ //À isoler avant !
+		'tryMerge' => true,
 		'resource_class' => 'foaf:Person',
 		'resource_template' => 'Correspondant',
 		'item_set' => 'Rédacteurs de publications',
