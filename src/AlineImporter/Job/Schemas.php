@@ -30,7 +30,7 @@ const ARCHIVES=[
 		],
 	],
 	'Lieu d’archives' => [
-		'resource_class' => 'dcterms:Location',
+		'resource_class' => 'foaf:Organization',
 		'resource_template' => 'Lieu d’archives',
 		'item_set' => 'Lieux d’archives',
 		'persist_column' => 'archiveOId',
@@ -835,6 +835,7 @@ const CHPS=[
 	],
 	'Chapitre'=>[ //uniquement si `chapter` != 0
 		'tryMerge' => true,
+		'sameSet' => true,
 		'resource_class' => 'bibo:Chapter',
 		'resource_template' => 'Chapitre',
 		'item_set' => 'Chapitres de la correspondance',
@@ -871,6 +872,7 @@ const CHPS=[
 	],
 	'Destination' => [
 		'tryMerge' => true,
+		'addProperties'=>['locn:postName'], //Liste des propriétés à rajouter à l’ancien item lors d’une fusion
 		'resource_class' => 'locn:Address',
 		'resource_template' => 'Adresse',
 		'item_set' => 'Lieux de destination des lettres',
@@ -879,7 +881,7 @@ const CHPS=[
 		'propertySchemas'=> [
 			'dcterms:title'=>[
 				'type' => 'literal',
-				'defaultValue' => 'Adresse de %s %s',
+				'defaultValue' => 'Adresse de %2$s %1$s',
 				'defaultValueColumns' => ['fndst', 'lndst']],
 			'locn:postName' => [
 				'type' => 'literal',
@@ -895,7 +897,7 @@ const CHPS=[
 		'propertySchemas'=> [
 			'dcterms:title'=>[
 				'type' => 'literal',
-				'defaultValue' => 'Commune de %s',
+				'defaultValue' => '%s (ville)',
 				'defaultValueColumns' => ['dstsite']],
 			'locn:postName' => [
 				'type' => 'literal',
@@ -904,6 +906,7 @@ const CHPS=[
 	],
 	'Destinataire'=>[ //si bioid != 0
 		'tryMerge' => true,
+		'addProperties' => ['locn:address'],
 		'resource_class' => 'foaf:Person',
 		'resource_template' => 'Correspondant',
 		'item_set' => 'Correspondants d’Henri Poincaré',

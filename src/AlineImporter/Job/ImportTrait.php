@@ -716,13 +716,38 @@ trait ImportTrait {
 			//On retient une référence de l’item pour mémoriser son ID dans la BDD
 			$itemReferences[$key]=$item->getReference();
 			
-			//On met à jour l’item trouvé avec les nouvelles données
-			$this->api->update('items', $item->id(), $newData);
+			$cleanedData = $this->cleanDataForMerge($itemSchema, $newData);
+			
+			if(!empty($cleanedData))
+				//On met à jour l’item trouvé avec les nouvelles données
+				$this->api->update('items', $item->id(), $cleanedData, [],
+						['isPartial'=>true, 'collectionAction' => 'append'] );
 			
 			//Et on supprime les données de la liste des items à créer
 			unset($itemDataList[$key]);
 		}
 		
 		return $itemReferences;
+	}
+	
+	/**
+	 * Élimine les données non nécessaires lors d’une fusion.
+	 * @param array $schema Schéma du type d’item.
+	 * @param array $data Données (JSON-LD compatible) à nettoyer.
+	 * @return array Données (JSON-LD compatible) à rajouter à l’item.
+	 */
+	private function cleanDataForMerge(array $schema, array $data) {
+		$cleanedData = [];
+		
+		//si on doit ajouter l’item set
+		if(!isset($schema['sameSet']) || !$schema['sameSet']) 
+			$cleanedData['o:item_set']=$data['o:item_set'];
+		
+		//Si on doit ajouter des propriétés
+		if(!empty($schema['addProperties'])) 
+			foreach ($schema['addProperties'] as $term)
+				$cleanedData[$term]=$data[$term];
+		
+		return $cleanedData;
 	}
 }
