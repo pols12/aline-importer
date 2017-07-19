@@ -2,6 +2,7 @@
 namespace AlineImporter\Job;
 
 use Omeka\Api\Representation\ResourceReference;
+use AlineImporter\Cleaner\Aline as AlineCleaner;
 
 /**
  * Description of Import
@@ -295,7 +296,7 @@ trait ImportTrait {
 						$fileId= '.html'=== substr($fileName, -5)
 								? substr($fileName, 0, -5)
 								: $fileName;
-						$URLs = [ $this->getFile($fileId, false) ];
+						$URLs = [ $this->getFile($fileId) ];
 						break;
 				}
 				
@@ -473,7 +474,10 @@ trait ImportTrait {
 		
 		$fileName="http://henripoincarepapers.univ-nantes.fr/{$row['url']}";
 		
-		if($getContent) return file_get_contents($fileName);
+		if($getContent) {
+			$cleaner = new AlineCleaner($fileName);
+			return $cleaner->getContent();
+		}
 		else return $fileName;
 	}
 	
