@@ -950,6 +950,7 @@ const CHPS=[
 		],
 	],
 	'Lettre' => [ //si doc=0
+		'condition' => "doc=0",
 		'resource_class' => 'bibo:Letter',
 		'resource_template' => 'Lettre',
 		'item_set' => 'Correspondance',
