@@ -30,6 +30,7 @@ class ListNeeded implements Schemas {
 			}
 		}
 		echo '<pre>';
+		echo 'Tables : '.strtolower(implode(", ",$this->tables)).PHP_EOL;
 		echo 'Vocabulaires : '.implode(", ",$vocs).PHP_EOL;
 		echo 'Item sets : '.implode(", ",$sets).PHP_EOL;
 		echo 'Resource templates : '.implode(", ",$templates).PHP_EOL;
