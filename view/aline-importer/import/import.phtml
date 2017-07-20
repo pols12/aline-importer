@@ -1,4 +1,16 @@
 <!-- Chemin de ce fichier :
 /view/{namespace}/{controller}/{action}.phtml -->
-<h1>Blog\ListController::indexAction()</h1>
-<?php echo $content; ?>
+<h1>AlineImporter</h1>
+<?php
+$this->headTitle('AlineImporter');
+if(isset($form)) {
+	$form->setAttribute('action', $this->url('importroute', ['action' => 'add']));
+	$form->prepare();
+
+	echo $this->form()->openTag($form);
+	echo $this->formRow($form->get('table'));
+	echo $this->formSubmit($form->get('submit'));
+	echo $this->form()->closeTag();
+}
+else echo $content; 
+?>
