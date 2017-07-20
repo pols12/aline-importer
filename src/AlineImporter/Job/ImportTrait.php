@@ -387,7 +387,7 @@ trait ImportTrait {
 		$statementTest=$this->pdo->query($sqlTest);
 		
 		if(!$statementTest)
-			throw new \Exception(print_r($this->pdo->errorInfo()), true);
+			throw new \Exception(print_r($this->pdo->errorInfo(), true));
 		
 		if(current($statementTest->fetch()) > 0) //Si la colonne existe déjà
 			return false;
@@ -432,7 +432,7 @@ trait ImportTrait {
 							->fetchAll(\PDO::FETCH_GROUP | \PDO::FETCH_UNIQUE | \PDO::FETCH_ASSOC);
 					//Les $foreignRows sont indexés par la première colonne de la table
 				else
-					throw new \Exception(print_r($this->pdo->errorInfo()), true);
+					throw new \Exception(print_r($this->pdo->errorInfo(), true));
 
 				foreach ($rows as &$row) {
 					$foreignKeyValue =$row[ $schema['foreignKeyColumn']];
@@ -470,7 +470,7 @@ trait ImportTrait {
 		if($statement)
 			$row=$statement->fetch(\PDO::FETCH_ASSOC);
 		else
-			throw new \Exception(print_r($this->pdo->errorInfo()), true);
+			throw new \Exception(print_r($this->pdo->errorInfo(), true));
 		
 		$fileName="http://henripoincarepapers.univ-nantes.fr/{$row['url']}";
 		
