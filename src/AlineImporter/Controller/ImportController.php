@@ -8,7 +8,7 @@ use AlineImporter\Job\Import;
 use AlineImporter\Job\ImportTask; //Quand PHP-CLI n’est pas dispo
 
 //Formulaire
-use AlineImporter\Form\TableForm;
+use AlineImporter\Form\ImportConfigForm;
 use Zend\InputFilter\InputFilterAwareInterface;
 use DomainException;
 use Zend\Filter\StringTrim;
@@ -41,7 +41,7 @@ class ImportController extends AbstractActionController
 	public function importAction() {
 		//Affichage du formulaire demandant la table
 		
-		$form = new TableForm();
+		$form = new ImportConfigForm();
 		$form->get('submit')->setValue('Import');
 		
 		$request = $this->getRequest();
@@ -61,8 +61,11 @@ class ImportController extends AbstractActionController
 		//Lancement de l’importation
 		
 		$table=$form->getData()['table'];
+		$startOffset=$form->getData()['startOffset'];
+		$endOffset=$form->getData()['endOffset'];
 		/* @var $job \Omeka\Entity\Job */
-		$job = $this->jobDispatcher()->dispatch(Import::class, ['table'=>$table]);
+		$job = $this->jobDispatcher()->dispatch(Import::class,
+				['table'=>$table, 'startOffset'=>$startOffset, 'endOffset'=>$endOffset]);
 		
 		//Lancement de l’import sans utiliser de Job (lorsque php-cli n’est pas dispo)
 //		$job = new ImportTask('archives',$this->api,$this->logger, $this->pdo);

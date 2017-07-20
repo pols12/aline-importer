@@ -8,7 +8,7 @@ use Zend\Form\Form;
  *
  * @author pols12
  */
-class TableForm extends Form {
+class ImportConfigForm extends Form {
 	public function __construct($name = null)
     {
         // We will ignore the name provided to the constructor
@@ -19,6 +19,20 @@ class TableForm extends Form {
             'type' => 'text',
             'options' => [
                 'label' => 'Table',
+            ],
+        ]);
+        $this->add([
+            'name' => 'startOffset',
+            'type' => 'text',
+            'options' => [
+                'label' => 'Commencer à la ligne ',
+            ],
+        ]);
+        $this->add([
+            'name' => 'endOffset',
+            'type' => 'text',
+            'options' => [
+                'label' => 'Jusqu’à la ligne ',
             ],
         ]);
         $this->add([

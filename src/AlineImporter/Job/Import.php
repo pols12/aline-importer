@@ -52,6 +52,8 @@ class Import extends AbstractJob implements Schemas {
 	
     private function import() {
 		foreach ($this->tableSchema as $itemSchema) {
+			$this->offset=$this->getArg('startOffset');
+			$this->maxOffset=$this->getArg('endOffset');
 			$count = $this->importItemType($itemSchema);
 			
 			if($this->shouldStop()) {

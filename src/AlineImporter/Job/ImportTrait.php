@@ -20,6 +20,11 @@ trait ImportTrait {
 	protected $table;
 	protected $tableSchema;
 	
+	/** @var int Numéro de la ligne de la BDD à partir de laquelle retourner les données. */
+	protected $offset;
+	/** @var int {@link $offset} maximum à partir duquel on arrête le script. */
+	protected $maxOffset;
+	
 	/**
      * Importe depuis Aline dans Omeka.
      * @return int Nombre d’items du dernier type insérés.
@@ -29,52 +34,59 @@ trait ImportTrait {
 	private function importItemType(array $itemSchema) {
 		//Si la configuration n’est pas défini, on arrête le script
 		if(!isset($itemSchema['item_set'])) throw new \Exception("Piege !");
-
+		
 		$this->logger->info("Début de l’import des {$itemSchema['item_set']}...");
-
+		
 		//si le schéma définit une colonne unique, et des valeurs poubelle, on les précise
 		$uniqueColumns = $this->getUniqueColumns($itemSchema);
 		$dustValues = isset($itemSchema['dustValues']) ? $itemSchema['dustValues'] : [];
 		$condition = isset($itemSchema['condition']) ? $itemSchema['condition'] : '1=1';
-
-		//On récupère les données à importer (nettoyées)
-		$valueRows = $this->getCleanedRows($itemSchema['propertySchemas'],
-				$uniqueColumns, $dustValues, $condition);
-
-		$this->logger->info("Requête SELECT sur Aline finalisée : "
-				.count($valueRows)." lignes récupérées.");
 
 		//Définit la classe, le modèle et la collection
 		$genericData = $this->getGenericData($itemSchema);
 
 		//On prépare le schéma
 		$this->setSchemaPropertyIds($itemSchema['propertySchemas']);
+		
+		//On récupère les données à importer (nettoyées)
+		//Et on continue si au moins 1 ligne a été récupérée.
+		while(($valueRows = $this->getCleanedRows($itemSchema['propertySchemas'],
+					$uniqueColumns, $dustValues, $condition) )
+				&& (0!=count($valueRows))
+				&& $this->offset < $this->maxOffset)
+		{
+			$this->logger->info("Nombre de cycle nettoyés :".gc_collect_cycles());
+			$this->logger->info("Requête SELECT sur Aline finalisée : "
+					.count($valueRows)." lignes récupérées.");
 
-		//On traite les jointures
-		$this->setLinkedItemIds($valueRows, $itemSchema['propertySchemas']);
+			//On traite les jointures
+			$this->setLinkedItemIds($valueRows, $itemSchema['propertySchemas']);
 
-		//On récupères les propriétés et on les fusionne pour remplir $itemDataList
-		$itemDataList = []; //Tableau indexant les tableaux JSON-LD des items
-		foreach ($valueRows as $row) {//Pour chaque entrée dans Aline
-			if( NULL === $row ) continue;
+			//On récupères les propriétés et on les fusionne pour remplir $itemDataList
+			$itemDataList = []; //Tableau indexant les tableaux JSON-LD des items
+			foreach ($valueRows as $row) {//Pour chaque entrée dans Aline
+				if( NULL === $row ) continue;
 
-			$itemDataList[$row['unq']] = array_merge($genericData,
-						$this->getPropertiesArray($itemSchema['propertySchemas'], $row),
-						$this->getMediasArray($itemSchema, $row)
-					);
+				$itemDataList[$row['unq']] = array_merge($genericData,
+							$this->getPropertiesArray($itemSchema['propertySchemas'], $row),
+							$this->getMediasArray($itemSchema, $row)
+						);
+			}
+
+			//Tableau associant aux clés de $itemDataList les ResourceReference des items créés
+			$itemReferences =
+				$this->tryMerge($itemSchema, $itemDataList) //Mise à jour des items déjà présents
+				+ $this->api->batchCreate('items', $itemDataList, [], ['continueOnError'=>true])
+					->getContent(); //Création des autres items
+
+			$this->logger->info(count($itemReferences)." items ont été créés.");
+
+			//On stocke dans Aline les Ids des items que l’on vient de créer.
+			$this->persistIds($itemReferences, $itemSchema['persist_column'],
+					$itemSchema['item_set'], $uniqueColumns);
+			
+			$this->offset += 20;
 		}
-
-		//Tableau associant aux clés de $itemDataList les ResourceReference des items créés
-		$itemReferences =
-			$this->tryMerge($itemSchema, $itemDataList) //Mise à jour des items déjà présents
-			+ $this->api->batchCreate('items', $itemDataList, [], ['continueOnError'=>true])
-				->getContent(); //Création des autres items
-
-		$this->logger->info(count($itemReferences)." items ont été créés.");
-
-		//On stocke dans Aline les Ids des items que l’on vient de créer.
-		$this->persistIds($itemReferences, $itemSchema['persist_column'],
-				$itemSchema['item_set'], $uniqueColumns);
 		
 		return count($itemReferences);
 	}
@@ -99,7 +111,7 @@ trait ImportTrait {
 		$sql.=" GROUP BY unq";
 		
 		//Classement pour avoir toujours le même ordre
-		$sql.=" ORDER BY $orderBy ASC";
+		$sql.=" ORDER BY $orderBy ASC LIMIT 20 OFFSET {$this->offset}";
 		
 		$statement=$this->pdo->query($sql);
 		if($statement)

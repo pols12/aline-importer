@@ -9,6 +9,8 @@ if(isset($form)) {
 
 	echo $this->form()->openTag($form);
 	echo $this->formRow($form->get('table'));
+	echo $this->formRow($form->get('startOffset'));
+	echo $this->formRow($form->get('endOffset'));
 	echo $this->formSubmit($form->get('submit'));
 	echo $this->form()->closeTag();
 }
