@@ -13,26 +13,29 @@ class Import extends AbstractJob implements Schemas {
 	use ImportTrait;
 
 	const SEPARATOR = '€€'; //Séparateur arbitraire qui ne risque pas d’être dans les colonnes
-	const PREFIX = ''; //Préfixe des tables d’Aline dans la BDD.
+	const PREFIX = 'aline__'; //Préfixe des tables d’Aline dans la BDD.
 
 	public function perform() {
 		//On prépare la connexion à la BDD Aline
-		$this->pdo = new \PDO('mysql:dbname=aline;host=localhost','omeka','omeka');
+//		$this->pdo = $this->getArg('pdo');//new \PDO('mysql:dbname=aline;host=localhost','omeka','omeka');
+		require __DIR__ .'/../../../config/db.config.php';
+		$this->pdo =new \PDO("mysql:dbname=$dbname;host=$host;charset=utf8",$user,$password);
+		
 		//On récupère le service API
 		$this->api = $this->getServiceLocator()->get('Omeka\ApiManager');
 		//On récupère le service de journalisation
 		$this->logger = $this->getServiceLocator()->get('Omeka\Logger');
 		\Zend\Log\Logger::registerErrorHandler($this->logger);
-
+		
 		$this->logger->info("Services initialisés. Récupération de la table...");
 		
 		//On récupère le nom de la table à importer depuis les arguments
-		$this->table = $this->getArg('table');
-		if(! defined('self::'.strtoupper($this->table)) )
+		$this->table = self::PREFIX.$this->getArg('table');
+		if(! defined('self::'.strtoupper($this->getArg('table'))) )
 			throw new \Exception("La table `$this->table` n’a pas de schéma défini.");
 		
 		//On récupère le schéma de cette table
-		$this->tableSchema=constant('self::'.strtoupper($this->table));
+		$this->tableSchema=constant('self::'.strtoupper($this->getArg('table')));
 		
 		$this->logger->info("Schéma de la table {$this->table} récupéré.");
 		

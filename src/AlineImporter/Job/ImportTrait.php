@@ -465,7 +465,7 @@ trait ImportTrait {
 	private function getFile($fileId, $getContent=true) {
 		if(empty($fileId)) return;
 		
-		$sql="SELECT * FROM xmlfile WHERE file='$fileId'";
+		$sql="SELECT * FROM ".self::PREFIX."xmlfile WHERE file='$fileId'";
 		$statement=$this->pdo->query($sql);
 		if($statement)
 			$row=$statement->fetch(\PDO::FETCH_ASSOC);
