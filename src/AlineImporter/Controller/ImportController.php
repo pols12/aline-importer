@@ -68,11 +68,11 @@ class ImportController extends AbstractActionController
 //				['table'=>$table, 'startOffset'=>$startOffset, 'endOffset'=>$endOffset]);
 		
 		//Lancement de l’import sans utiliser de Job (lorsque php-cli n’est pas dispo)
-		$job = new ImportTask('archives',$this->api,$this->logger, $this->pdo, $startOffset, $endOffset);
-		$job->perform();
+		$task = new ImportTask($table,$this->api,$this->logger, $this->pdo, $startOffset, $endOffset);
+		$task->perform();
 		
-		$content = "Import de la table $table lancé.<br>"
-				. "<a href='/omeka-s/admin/job/{$job->getId()}'>Voir l’état</a>" ;
+		$content = "Import de la table $table lancé.<br>";
+				//. "<a href='/omeka-s/admin/job/{$job->getId()}'>Voir l’état</a>" ;
 		
 		return new ViewModel([
 			'content' => $content
