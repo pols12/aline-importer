@@ -12,7 +12,7 @@ class ImportTask implements Schemas {
 	const SEPARATOR = '€€'; //Séparateur arbitraire qui ne risque pas d’être dans les colonnes
 	const PREFIX = 'aline__'; //Préfixe des tables d’Aline dans la BDD.
 	
-	public function __construct($table, $api, $logger, $pdo) {
+	public function __construct($table, $api, $logger, $pdo, $startOffset, $endOffset) {
 		//On récupère le service API
 		$this->api = $api;
 		//On récupère le service de journalisation
@@ -30,6 +30,9 @@ class ImportTask implements Schemas {
 		
 		//On récupère le schéma de cette table
 		$this->tableSchema=constant('self::'.strtoupper($table));
+		
+		$this->offset=$startOffset;
+		$this->maxOffset=$endOffset;
 	}
 	
 	public function perform() {
