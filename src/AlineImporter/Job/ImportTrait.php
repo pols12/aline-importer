@@ -501,6 +501,11 @@ trait ImportTrait {
 		if($getContent) {
 			try {
 				$cleaner = new AlineCleaner($fileName);
+			} catch (\Exception $exc) {
+				$this->logger->warn($exc->getMessage()." unq={$this->currentRowUnq}");
+				return '';
+			}
+			try {
 				return (string) $cleaner->getContent();
 			} catch (\Exception $exc) {
 				$this->logger->warn($exc->getMessage()." unq={$this->currentRowUnq}");

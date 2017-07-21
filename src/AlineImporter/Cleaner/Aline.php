@@ -52,6 +52,10 @@ class Aline {
 		//On récupère uniquement le cœur de la page
 		$this->content = $this->obj->find('article')[0];
 		
+		if(NULL === $this->content) {
+			throw new \Exception("No <article> tag at $url");
+		}
+		
 		//On inclue les images externes dans le HTML
 		foreach ($this->content->find('img') as &$img) {
 			$img->src = $this->parseImg(dirname($this->source).'/'.$img->src);
