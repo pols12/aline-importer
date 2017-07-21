@@ -22,10 +22,15 @@ class Aline {
 	/**
 	 * Crée un objet DOM nettoyable.
 	 * @param string $url URL de la page HTML que l’on veut nettoyer.
+	 * @throws Exception URL not found
 	 */
 	public function __construct($url) {
 		$this->source=$url;
 		$this->obj= file_get_html($url);
+		
+		if(! $this->obj) {
+			throw new \Exception("URL not found ($url).");
+		}
 	}
 	
 	/**

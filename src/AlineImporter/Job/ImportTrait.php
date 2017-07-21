@@ -25,6 +25,9 @@ trait ImportTrait {
 	/** @var int {@link $offset} maximum à partir duquel on arrête le script. */
 	protected $maxOffset;
 	
+	/** @var string Valeur de Unq pour la ligne de la BDD dont le script compile les données. */
+	protected $currentRowUnq;
+	
 	/**
      * Importe depuis Aline dans Omeka.
      * @return int Nombre d’items du dernier type insérés.
@@ -66,7 +69,8 @@ trait ImportTrait {
 			$itemDataList = []; //Tableau indexant les tableaux JSON-LD des items
 			foreach ($valueRows as $row) {//Pour chaque entrée dans Aline
 				if( NULL === $row ) continue;
-
+				
+				$this->currentRowUnq=$row['unq'];
 				$itemDataList[$row['unq']] = array_merge($genericData,
 							$this->getPropertiesArray($itemSchema['propertySchemas'], $row),
 							$this->getMediasArray($itemSchema, $row)
@@ -495,8 +499,13 @@ trait ImportTrait {
 		$fileName="http://henripoincarepapers.univ-nantes.fr/{$row['url']}";
 		
 		if($getContent) {
-			$cleaner = new AlineCleaner($fileName);
-			return (string) $cleaner->getContent();
+			try {
+				$cleaner = new AlineCleaner($fileName);
+				return (string) $cleaner->getContent();
+			} catch (\Exception $exc) {
+				$this->logger->warn($exc->getMessage()." unq={$this->currentRowUnq}");
+				return '';
+			}
 		}
 		else return $fileName;
 	}
