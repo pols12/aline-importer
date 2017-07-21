@@ -303,12 +303,12 @@ trait ImportTrait {
 						$URLs=empty($fileName) ? []
 								: [ "http://henripoincarepapers.univ-lorraine.fr/chp/hp-pdf/$fileName" ];
 						break;
-					case 'HTML':
+					case 'HTML': //N’est plus utilisé (on utilise 'text' pour importer le contenu)
 						$fileName=$values[$schema['fileNameColumn']];
 						$fileId= '.html'=== substr($fileName, -5)
 								? substr($fileName, 0, -5)
 								: $fileName;
-						$URLs = [ $this->getFile($fileId) ];
+						$URLs = [ $this->getFile($fileId, false) ];
 						break;
 				}
 				
@@ -332,11 +332,15 @@ trait ImportTrait {
 					$i++;
 				}
 			} else {
-				$text = isset($schema['valueColumn']) //Si c’est du texte,
-						? nl2br(htmlspecialchars($values[$schema['valueColumn']])) //on l’assainit.
-						//Sinon c’est un nom de fichier,
-						: $this->getFile($values[$schema['fileNameColumn']]); //on l’importe.
-
+				if(isset($schema['valueColumn'])) { //Si c’est du texte,
+					$text = nl2br(htmlspecialchars($values[$schema['valueColumn']])); //on l’assainit.
+				} else { //Sinon c’est un nom de fichier,
+					$fileName=$values[$schema['fileNameColumn']];
+					$fileId= '.html'=== substr($fileName, -5)
+							? substr($fileName, 0, -5)
+							: $fileName;
+					$text = $this->getFile($fileId); //on importe son contenu.
+				}
 				if(empty($text)) continue;
 
 				$genericMediaData= [
@@ -488,7 +492,7 @@ trait ImportTrait {
 		
 		if($getContent) {
 			$cleaner = new AlineCleaner($fileName);
-			return $cleaner->getContent();
+			return (string) $cleaner->getContent();
 		}
 		else return $fileName;
 	}
