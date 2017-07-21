@@ -103,6 +103,9 @@ trait ImportTrait {
 	 * @throws \Exception Problème de connexion à la BDD.
 	 */
 	private function getValuesFromAline(array $unqColumns=['id'], $condition='1=1', $orderBy='unq') {
+		if($this->offset > $this->maxOffset)//Si on dépasse le numéro max de la ligne voulue
+			return []; //on retourne un tableau vide.
+		
 		$sql="SELECT *, CONCAT(IFNULL("
 				.implode(",''),'".self::SEPARATOR."',IFNULL(", $unqColumns).",'')) unq "
 				. "FROM {$this->table} WHERE $condition";
@@ -111,7 +114,8 @@ trait ImportTrait {
 		$sql.=" GROUP BY unq";
 		
 		//Classement pour avoir toujours le même ordre
-		$sql.=" ORDER BY $orderBy ASC LIMIT 20 OFFSET {$this->offset}";
+		$limit= min([20, $this->maxOffset-$this->offset]);
+		$sql.=" ORDER BY $orderBy ASC LIMIT $limit OFFSET {$this->offset}";
 		
 		$statement=$this->pdo->query($sql);
 		if($statement)
