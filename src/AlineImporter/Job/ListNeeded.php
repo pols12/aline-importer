@@ -22,11 +22,11 @@ class ListNeeded implements Schemas {
 				if(!in_array($template, $templates))
 					$templates[]=$template;
 				
-				foreach($schema['propertySchemas'] as $term => $schema){
-					$voc=explode(":",$term)[0];
-					if(!in_array($voc, $vocs))
-						$vocs[]=$voc;
-				}
+				$this->getVocFromProperties($vocs, $schema['propertySchemas']);
+				
+				if(isset($schema['medias']))
+					foreach ($schema['medias'] as $mediaSchema)
+						$this->getVocFromProperties($vocs, $mediaSchema['propertySchemas']);
 			}
 		}
 		echo '<pre>';
@@ -34,6 +34,20 @@ class ListNeeded implements Schemas {
 		echo 'Vocabulaires : '.implode(", ",$vocs).PHP_EOL;
 		echo 'Item sets : '.implode(", ",$sets).PHP_EOL;
 		echo 'Resource templates : '.implode(", ",$templates).PHP_EOL;
+	}
+	
+	/**
+	 * Complète la liste de vocabulaire donnée par ceux utilisée dans le schéma
+	 * de proprités donné.
+	 * @param array $vocs Liste de vocabulaire.
+	 * @param array $propertySchemas $itemSchema['propertySchemas']
+	 */
+	private function getVocFromProperties(array &$vocs, array $propertySchemas) {
+		foreach($propertySchemas as $term => $schema){
+			$voc=explode(":",$term)[0];
+			if(!in_array($voc, $vocs))
+				$vocs[]=$voc;
+		}
 	}
 }
 $rien=new ListNeeded();
