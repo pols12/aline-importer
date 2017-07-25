@@ -19,9 +19,9 @@ class Volume5 {
 	/** @var PhpWord */
 //	protected $phpWord;
 	
-	public $date;
-	public $titre;
-
+	private $date;
+	private $titre;
+	private $errors;
 
 	public function loop() {
 		$files = array_diff(scandir(self::LETTERS), ['.','..']);
@@ -29,8 +29,9 @@ class Volume5 {
 		foreach ($files as $file){
 			$this->fileName = $file;
 			$this->updateData();
-			break;
+//			break;
 		}
+		print_r($this->errors);
 	}
 	
 	private function updateData() {
@@ -43,26 +44,42 @@ class Volume5 {
 		$paragraphes=$xml->xpath('//w:body/w:p');
 		
 		//Titre de la lettre
+		try {
+			$styleTitre = $this->readStyle($paragraphes[0]);
+			if($styleTitre == "Titre3") {
+				$this->titre = $this->readText($paragraphes[0]);
+			} else
+				throw new \Exception("Le titre n’a pas été trouvé. Fichier : {$this->fileName}");
+		} catch(\Exception $e) {
+			$this->errors[]=$e->getMessage();
+		}
 		
-		$styleTitre = $this->readStyle($paragraphes[0]);
-		if($styleTitre == "Titre3") {
-			$this->titre = $this->readText($paragraphes[0]);
-		} else
-			throw new Exception("Le titre n’a pas été trouvé. Fichier : {$this->fileName}");
+		//Date de la lettre
+		try {
+			$pWithDate = $this->findStyle($paragraphes, "DateLettre");
+			$this->date = $this->readText($pWithDate);
+		} catch(\Exception $e) {
+			$this->errors[]=$e->getMessage();
+		}	
 		
-		$styleDate = $this->readStyle($paragraphes[1]);
-		if($styleDate == "DateLettre") {
-			$this->date = $this->readText($paragraphes[1]);
-		} else
-			throw new Exception("Le titre n’a pas été trouvé. Fichier : {$this->fileName}");
-		
-		echo $this->titre.PHP_EOL;
-		echo $this->date.PHP_EOL;
+//		echo $this->titre.PHP_EOL;
+//		echo $this->date.PHP_EOL;
 	}
 	
 	private function readStyle(\SimpleXMLElement $p) {
-		return $p->xpath('w:pPr[1]/w:pStyle')[0]
-				->attributes('w', true)->{'val'};
+		$styleNodes=$p->xpath('w:pPr[1]/w:pStyle');
+		if(isset($styleNodes[0]))
+			return $styleNodes[0]->attributes('w', true)->{'val'};
+		return false;
+	}
+	
+	private function findStyle(array $ps, $searched){
+		foreach ($ps as $p) {
+			$style = $this->readStyle($p);
+			if($style == $searched)
+				return $p;
+		}
+		throw new \Exception("La date n’a pas été trouvée. Fichier : {$this->fileName}");
 	}
 	
 	private function readText(\SimpleXMLElement $p) {
