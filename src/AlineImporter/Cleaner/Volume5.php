@@ -19,6 +19,10 @@ class Volume5 {
 	/** @var PhpWord */
 //	protected $phpWord;
 	
+	public $date;
+	public $titre;
+
+
 	public function loop() {
 		$files = array_diff(scandir(self::LETTERS), ['.','..']);
 		
@@ -36,26 +40,40 @@ class Volume5 {
 		
 		$xml = new \SimpleXMLElement($zip->getFromName('word/document.xml'));
 		
-		$p=$xml->xpath('//w:body/w:p[1]')[0];
+		$paragraphes=$xml->xpath('//w:body/w:p');
 		
 		//Titre de la lettre
 		
-		$styleTitre = $p->xpath('w:pPr[1]/w:pStyle')[0]
-				->attributes('w', true)->{'val'};
+		$styleTitre = $this->readStyle($paragraphes[0]);
 		if($styleTitre == "Titre3") {
-			$titre='';
-			foreach ($p->xpath('w:r') as $r) {
-				if(isset($r->xpath('w:t')[0]))
-					$titre.=$r->xpath('w:t')[0];
-			}
-			echo $titre.PHP_EOL;
+			$this->titre = $this->readText($paragraphes[0]);
 		} else
 			throw new Exception("Le titre n’a pas été trouvé. Fichier : {$this->fileName}");
 		
+		$styleDate = $this->readStyle($paragraphes[1]);
+		if($styleDate == "DateLettre") {
+			$this->date = $this->readText($paragraphes[1]);
+		} else
+			throw new Exception("Le titre n’a pas été trouvé. Fichier : {$this->fileName}");
 		
-		
+		echo $this->titre.PHP_EOL;
+		echo $this->date.PHP_EOL;
 	}
 	
+	private function readStyle(\SimpleXMLElement $p) {
+		return $p->xpath('w:pPr[1]/w:pStyle')[0]
+				->attributes('w', true)->{'val'};
+	}
+	
+	private function readText(\SimpleXMLElement $p) {
+		$text='';
+		foreach ($p->xpath('w:r') as $r)
+			if(isset($r->xpath('w:t')[0]))
+				$text.=$r->xpath('w:t')[0];
+		return $text;
+	}
+
+
 	/**
 	 * Utilise l’API SEARCH pour rechercher l’item qui correspond aux données
 	 * passées en paramètre.
