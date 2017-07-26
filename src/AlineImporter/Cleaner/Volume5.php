@@ -5,7 +5,7 @@ namespace AlineImporter\Cleaner;
 //use PhpOffice\PhpWord\IOFactory;
 //use PhpOffice\PhpWord\PhpWord;
 
-include_once __DIR__.'/../../../vendor/autoload.php';
+include_once __DIR__.'/class.Diff.php';
 
 /**
  * Analyse syntaxique et nettoyage des lettres du volume 5.
@@ -14,7 +14,8 @@ include_once __DIR__.'/../../../vendor/autoload.php';
  */
 class Volume5 {
 	const LETTERS = __DIR__.'/../../../assets/letters.docx/';
-
+	private $errors;
+	
 	protected $fileName;
 	
 	private $date;
@@ -23,8 +24,7 @@ class Volume5 {
 	private $nbPages;
 	private $copyright;
 	private $copyrightAddress;
-	
-	private $errors;
+	private $incipit;
 
 	public function loop() {
 		$files = array_diff(scandir(self::LETTERS), ['.','..']);
@@ -32,7 +32,7 @@ class Volume5 {
 		foreach ($files as $file){
 			$this->fileName = $file;
 			$this->updateData();
-//			break;
+			break;
 		}
 		print_r($this->errors);
 	}
@@ -54,6 +54,32 @@ class Volume5 {
 		//Type, copyright, nbPages
 		$this->parseCopyright($paragraphes);
 		
+		//Incipit
+		$datePKey = array_search($this->findStyle($paragraphes, "DateLettre"), $paragraphes);
+		var_dump(empty($this->readText($paragraphes[2])));
+		$i=-1;
+		foreach ($paragraphes as $p) {
+			$i++;
+			if($i <= $datePKey)
+				continue;
+			$text=$this->readText($p);
+			if(!empty($text))
+				break;
+		}
+		$fullIncipit = substr($text, 0, 156);
+		$this->incipit = substr($fullIncipit, 0, strrpos($fullIncipit, ' '));
+/*		$diff=\Diff::compare("Rien de bien neuf", "Rien de neuf", true);
+		$score=0;
+		foreach ($diff as $letter) {
+			switch($letter[1]) {
+				case \Diff::UNMODIFIED:
+					$score++;
+					break;
+				case \Diff::DELETED:
+				case \Diff::INSERTED:
+					$score--;
+			}
+		} */
 		
 //		echo $this->titre.PHP_EOL;
 //		echo $this->date.PHP_EOL;
@@ -61,6 +87,7 @@ class Volume5 {
 //		echo $this->nbPages.PHP_EOL;
 //		echo $this->copyright.PHP_EOL;
 //		echo $this->copyrightAddress.PHP_EOL;
+//		echo $this->incipit.PHP_EOL;
 	}
 	
 	private function readStyle(\SimpleXMLElement $p) {
@@ -86,6 +113,11 @@ class Volume5 {
 		throw new \Exception("Le style $searched n’a pas été trouvé. Fichier : {$this->fileName}");
 	}
 	
+	/**
+	 * Donne le contenu sans balisage d’un paragraphe.
+	 * @param \SimpleXMLElement $p Paragraphe dans lequel lire le texte.
+	 * @return string Contenu textuel du paragraphe.
+	 */
 	private function readText(\SimpleXMLElement $p) {
 		$text='';
 		foreach ($p->xpath('w:r') as $r)
