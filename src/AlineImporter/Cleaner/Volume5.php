@@ -16,11 +16,14 @@ class Volume5 {
 	const LETTERS = __DIR__.'/../../../assets/letters.docx/';
 
 	protected $fileName;
-	/** @var PhpWord */
-//	protected $phpWord;
 	
 	private $date;
 	private $titre;
+	private $type;
+	private $nbPages;
+	private $copyright;
+	private $copyrightAddress;
+	
 	private $errors;
 
 	public function loop() {
@@ -35,7 +38,6 @@ class Volume5 {
 	}
 	
 	private function updateData() {
-//		$this->phpWord = IOFactory::load($this->fileName);
 		$zip = new \ZipArchive();
 		$zip->open(self::LETTERS.$this->fileName);
 		
@@ -44,26 +46,21 @@ class Volume5 {
 		$paragraphes=$xml->xpath('//w:body/w:p');
 		
 		//Titre de la lettre
-		try {
-			$styleTitre = $this->readStyle($paragraphes[0]);
-			if($styleTitre == "Titre3") {
-				$this->titre = $this->readText($paragraphes[0]);
-			} else
-				throw new \Exception("Le titre n’a pas été trouvé. Fichier : {$this->fileName}");
-		} catch(\Exception $e) {
-			$this->errors[]=$e->getMessage();
-		}
+		$this->parseTitle($paragraphes);
 		
 		//Date de la lettre
-		try {
-			$pWithDate = $this->findStyle($paragraphes, "DateLettre");
-			$this->date = $this->readText($pWithDate);
-		} catch(\Exception $e) {
-			$this->errors[]=$e->getMessage();
-		}	
+		$this->parseDate($paragraphes);
+		
+		//Type, copyright, nbPages
+		$this->parseCopyright($paragraphes);
+		
 		
 //		echo $this->titre.PHP_EOL;
 //		echo $this->date.PHP_EOL;
+//		echo $this->type.PHP_EOL;
+//		echo $this->nbPages.PHP_EOL;
+//		echo $this->copyright.PHP_EOL;
+//		echo $this->copyrightAddress.PHP_EOL;
 	}
 	
 	private function readStyle(\SimpleXMLElement $p) {
@@ -73,13 +70,20 @@ class Volume5 {
 		return false;
 	}
 	
+	/**
+	 * Trouve un paragraphe avec un style donné parmi une liste de paragraphes.
+	 * @param array $ps Liste de paragraphes dans laquelle faire la recherche.
+	 * @param string $searched Le style du paragraphe cherché.
+	 * @return \SimpleXMLElement Le paragraphe cherché.
+	 * @throws \Exception Aucun paragraphe avec le style voulu n’a été trouvé.
+	 */
 	private function findStyle(array $ps, $searched){
 		foreach ($ps as $p) {
 			$style = $this->readStyle($p);
 			if($style == $searched)
 				return $p;
 		}
-		throw new \Exception("La date n’a pas été trouvée. Fichier : {$this->fileName}");
+		throw new \Exception("Le style $searched n’a pas été trouvé. Fichier : {$this->fileName}");
 	}
 	
 	private function readText(\SimpleXMLElement $p) {
@@ -99,6 +103,58 @@ class Volume5 {
 	private function findItem(array $data) {
 		
 	}
+
+	private function parseCopyright($paragraphes) {
+		try {
+			$pCopyright = $this->findStyle($paragraphes, "Copyright");
+			$pCopyrightText = $this->readText($pCopyright);
+		} catch(\Exception $e) {
+			$this->errors[]=$e->getMessage();
+		}
+		
+		if(isset($pCopyrightText)) {
+			$data = explode(', ', $pCopyrightText);
+			
+			try {
+				switch (count($data)) {
+					case 3:
+						$this->copyrightAddress = $data[2];
+					case 2:
+						$this->type = $data[0];
+						$nbPages_copyright = explode("p. ",$data[1]);
+						$this->nbPages = trim($nbPages_copyright[0]);
+						$this->copyright = trim($nbPages_copyright[1]);
+						break;
+					default:
+						throw new \Exception ("Le copyright n’a pas le bon nombre de virgules. Fichier : {$this->fileName}");
+				}
+			} catch(\Exception $e) {
+				$this->errors[]=$e->getMessage();
+			}
+		}
+	}
+
+	private function parseDate($paragraphes) {
+		try {
+			$pWithDate = $this->findStyle($paragraphes, "DateLettre");
+			$this->date = $this->readText($pWithDate);
+		} catch(\Exception $e) {
+			$this->errors[]=$e->getMessage();
+		}
+	}
+
+	private function parseTitle($paragraphes) {
+		try {
+			$styleTitre = $this->readStyle($paragraphes[0]);
+			if($styleTitre == "Titre3") {
+				$this->titre = $this->readText($paragraphes[0]);
+			} else
+				throw new \Exception("Le titre n’a pas été trouvé. Fichier : {$this->fileName}");
+		} catch(\Exception $e) {
+			$this->errors[]=$e->getMessage();
+		}
+	}
+
 }
 echo '<pre>';
 $cleaner=new Volume5();
