@@ -25,6 +25,7 @@ class Volume5 {
 	private $copyright;
 	private $copyrightAddress;
 	private $incipit;
+	private $fields;
 
 	public function loop() {
 		$files = array_diff(scandir(self::LETTERS), ['.','..']);
@@ -55,31 +56,12 @@ class Volume5 {
 		$this->parseCopyright($paragraphes);
 		
 		//Incipit
-		$datePKey = array_search($this->findStyle($paragraphes, "DateLettre"), $paragraphes);
-		var_dump(empty($this->readText($paragraphes[2])));
-		$i=-1;
-		foreach ($paragraphes as $p) {
-			$i++;
-			if($i <= $datePKey)
-				continue;
-			$text=$this->readText($p);
-			if(!empty($text))
-				break;
-		}
-		$fullIncipit = substr($text, 0, 156);
-		$this->incipit = substr($fullIncipit, 0, strrpos($fullIncipit, ' '));
-/*		$diff=\Diff::compare("Rien de bien neuf", "Rien de neuf", true);
-		$score=0;
-		foreach ($diff as $letter) {
-			switch($letter[1]) {
-				case \Diff::UNMODIFIED:
-					$score++;
-					break;
-				case \Diff::DELETED:
-				case \Diff::INSERTED:
-					$score--;
-			}
-		} */
+		$this->parseIncipit($paragraphes);
+		
+		//Champs
+		$this->readFields($xml);
+		$this->parseFields();
+		$this->parseFieldValues();
 		
 //		echo $this->titre.PHP_EOL;
 //		echo $this->date.PHP_EOL;
@@ -88,6 +70,7 @@ class Volume5 {
 //		echo $this->copyright.PHP_EOL;
 //		echo $this->copyrightAddress.PHP_EOL;
 //		echo $this->incipit.PHP_EOL;
+		print_r($this->fields);
 	}
 	
 	private function readStyle(\SimpleXMLElement $p) {
@@ -185,6 +168,152 @@ class Volume5 {
 		} catch(\Exception $e) {
 			$this->errors[]=$e->getMessage();
 		}
+	}
+
+	private function parseIncipit(array $paragraphes) {
+		$datePKey = array_search($this->findStyle($paragraphes, "DateLettre"), $paragraphes);
+		//On cherche le premier paragraphe non vide.
+		$i=-1;
+		foreach ($paragraphes as $p) {
+			$i++;
+			if($i <= $datePKey)
+				continue;
+			$text=$this->readText($p);
+			if(!empty($text))
+				break;
+		}
+		$fullIncipit = substr($text, 0, 156);
+		$this->incipit = substr($fullIncipit, 0, strrpos($fullIncipit, ' '));
+/*		$diff=\Diff::compare("Rien de bien neuf", "Rien de neuf", true);
+		$score=0;
+		foreach ($diff as $letter) {
+			switch($letter[1]) {
+				case \Diff::UNMODIFIED:
+					$score++;
+					break;
+				case \Diff::DELETED:
+				case \Diff::INSERTED:
+					$score--;
+			}
+		} */
+	}
+
+	private function readFields(\SimpleXMLElement $xml) {
+		$this->fields=[];
+		$fieldBegins = $xml->xpath('//w:fldChar[@w:fldCharType="begin"]');
+		foreach ($fieldBegins as $fieldBegin) {
+			$nextRs = $fieldBegin->xpath('../following-sibling::w:r');
+			$field='';
+			try {
+				foreach ($nextRs as $r) {
+					if( isset($r->xpath('w:instrText')[0]) )
+						$field.=$r->xpath('w:instrText')[0];
+					elseif( isset($r->xpath('w:fldChar[@w:fldCharType="end"]')[0]) )
+						break;
+					elseif( isset($r->xpath('w:fldChar[@w:fldCharType="separate"]')[0])
+							|| isset($r->xpath('w:t')[0]) )
+						continue;
+					else
+						throw new \Exception("Ni contenu ni fin de champ rencontré. Balise : {$r->asXML()}\n. Fichier : {$this->fileName}");
+				}
+				$this->fields[]=$field;
+			} catch(\Exception $e) {
+				$this->errors[]=$e->getMessage();
+			}
+		}
+	}
+
+	private function parseFields() {
+		foreach ($this->fields as &$field) {
+			if(substr($field, 0, 3) !== 'xe ')
+				continue;
+			$firstQuotePos = mb_strpos($field, '"');
+			$secondQuotePos = mb_strpos($field, '"', $firstQuotePos+1);
+			$fieldValue = mb_substr($field, $firstQuotePos+1, ($secondQuotePos-$firstQuotePos-1));
+			
+			if(FALSE === mb_strpos($field, '\\f')) { // si c’est l’index par défaut
+				$indexName='nominum';
+			} else {
+				$lastQuotePos = mb_strrpos($field, '"');
+				$secondLastQuotePos = mb_strrpos($field, '"', -(mb_strlen($field)-$lastQuotePos+1));
+				$indexId = mb_substr($field, $secondLastQuotePos+1, ($lastQuotePos-$secondLastQuotePos-1));
+				switch ($indexId) {
+					case 'pk':
+						$indexName = 'thématique';
+						break;
+					case 'subjects':
+						$indexName = 'rerum';
+						break;
+					case 'œuvres':
+						$indexName = 'œuvres';
+						break;
+					default:
+						throw new \Exception("Marque d’index inconnue ($indexId). Fichier : {$this->fileName}");
+				}
+			}
+			$field=['index' => $indexName, 'value' => $fieldValue];
+		}
+	}
+
+	private function parseFieldValues() {
+		foreach ($this->fields as &$field) {
+			switch($field['index']) {
+				case 'nominum':
+					$this->parseNominumValue($field);
+					break;
+				case 'thématique':
+					$this->parseThemeValue($field);
+					break;
+				case 'rerum':
+					$this->parseThemeValue($field);
+					break;
+				case 'œuvres':
+					$this->parseOeuvresValue($field);
+			}
+		}
+	}
+	
+	/**
+	 * Assigne au champ donné une valeur sous la forme "Prénom Nom".
+	 * @param array $field Élément de $this->fields dont la clé 'value' est la
+	 * valeur du champ dans Word.
+	 */
+	private function parseNominumValue(&$field) {
+		//On ne prend que ce qu’il y a avant la première parenthèse ouvrante
+		$value=trim( explode('(', $field['value'])[0] );
+		
+		$identity=explode(',', $value);
+		$lastName=trim($identity[0]);
+		$firstName = isset($identity[1]) ? $identity[1] : '';
+		
+		$field['value'] = trim("$firstName $lastName");
+	}
+	
+	/**
+	 * Assigne au champ donné une valeur sous forme d’une liste de thème, du
+	 * plus général au plus précis : [thème, sous-thème] généralement.
+	 * @param type $field Élément de $this->fields dont la clé 'value' est la
+	 * valeur du champ dans Word.
+	 */
+	private function parseThemeValue(&$field) {
+		//On supprime le ", " final.
+		$value=mb_substr($field['value'], 0, -2);
+		
+		$field['value']=explode(':',$value);
+	}
+	
+	private function parseOeuvresValue(&$field) {
+		//On supprime le ", " final.
+		$value=mb_substr($field['value'], 0, -2);
+		
+		//On sépare l’artiste et son œuvre.
+		$duet=explode(':',$value);
+		
+		$identity=explode(',', $duet[0]);
+		$lastName=trim($identity[0]);
+		$firstName = isset($identity[1]) ? $identity[1] : '';
+		
+		$field['value'] = ['artist' => "$firstName $lastName", 'work' => $duet[1]];
 	}
 
 }
