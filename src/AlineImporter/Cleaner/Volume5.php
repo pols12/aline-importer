@@ -271,6 +271,9 @@ class Volume5 {
 					$this->parseOeuvresValue($field);
 			}
 		}
+		//On élimine les doublons
+		$this->fields=array_map( "unserialize",
+				array_unique(array_map("serialize", $this->fields)) );
 	}
 	
 	/**
