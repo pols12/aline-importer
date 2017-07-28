@@ -68,8 +68,8 @@ class Letter {
 		
 		//Champs
 		$this->readFields($xml);
-		$this->parseFields();
-		$this->parseFieldValues();
+		if($this->parseFields())
+			$this->parseIndexFieldValues();
 		
 //		echo $this->titre.PHP_EOL;
 //		echo $this->date.PHP_EOL;
@@ -232,7 +232,8 @@ class Letter {
 	}
 
 	private function parseFields() {
-		foreach ($this->fields as &$field) {
+		$nbEditedFields=0;
+		foreach ($this->fields as $field) {
 			if(substr($field, 0, 3) !== 'xe ')
 				continue;
 			$firstQuotePos = mb_strpos($field, '"');
@@ -259,12 +260,14 @@ class Letter {
 						throw new \Exception("Marque d’index inconnue ($indexId). Fichier : {$this->fileName}");
 				}
 			}
-			$field=['index' => $indexName, 'value' => $fieldValue];
+			$this->indexFields[]=['index' => $indexName, 'value' => $fieldValue];
+			$nbEditedFields++;
 		}
+		return $nbEditedFields;
 	}
 
-	private function parseFieldValues() {
-		foreach ($this->fields as &$field) {
+	private function parseIndexFieldValues() {
+		foreach ($this->indexFields as &$field) {
 			switch($field['index']) {
 				case 'nominum':
 					$this->parseNominumValue($field);
