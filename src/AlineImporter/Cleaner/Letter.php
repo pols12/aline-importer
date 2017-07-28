@@ -184,11 +184,12 @@ class Letter {
 		} catch(\Exception $e) {
 			$datePKey = -1;
 		}
-		//On cherche le premier paragraphe non vide.
+		//On cherche le deuxième paragraphe non vide après la date.
+		//Le premier étant souvent la formule de politesse
 		$i=-1;
 		foreach ($paragraphes as $p) {
 			$i++;
-			if($i <= $datePKey)
+			if($i <= $datePKey+1)
 				continue;
 			$text=$this->readText($p);
 			if(!empty($text))
