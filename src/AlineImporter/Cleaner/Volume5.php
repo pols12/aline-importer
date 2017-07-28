@@ -28,7 +28,7 @@ class Volume5 {
 	public function __toString() {
 		return
 			'"fichier","date","titre","type","nbPages","copyright",'
-		. '"copyrightAddress","incipit"'.PHP_EOL
+		. '"copyrightAddress","incipit","Personnes","Thèmes"'.PHP_EOL
 			.implode("", $this->letters);
 	}
 }

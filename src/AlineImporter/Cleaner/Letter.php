@@ -10,6 +10,9 @@ include_once __DIR__.'/class.Diff.php';
  * @author pols12
  */
 class Letter {
+
+	const CSV_SUBSEPARATOR = ';';
+
 	private $errors;
 	
 	private $fileName;
@@ -22,7 +25,8 @@ class Letter {
 	private $copyrightAddress;
 	private $incipit;
 	private $fields;
-	
+	private $indexFields;
+
 	public function __construct($fileName) {
 		$this->fileName = $fileName;
 		$this->updateData();
@@ -38,8 +42,13 @@ class Letter {
 	 */
 	public function __toString() {
 		$handle = fopen('php://memory', 'w');
-		$data = [$this->fileName,$this->date,$this->titre,$this->type,$this->nbPages,
-				$this->copyright,$this->copyrightAddress,$this->incipit];
+		
+		list($nominum,$theme)=$this->indexFieldsToString();
+		
+		$data = [$this->fileName,$this->date,$this->titre,$this->type,
+			$this->nbPages,$this->copyright,$this->copyrightAddress,
+			$this->incipit,$nominum,$theme];
+		
 		fputcsv($handle, $data);
 		
 		fseek($handle, 0);
@@ -321,6 +330,13 @@ class Letter {
 		$field['value']=explode(':',$value);
 	}
 	
+	/**
+	 * Assigne au champ donné une valeur sous forme d’un tableau associatif,
+	 * avec une clé 'artist' pour le nom de l’artiste et une clé 'work' pour le
+	 * titre de l’œuvre.
+	 * @param type $field Élément de $this->fields dont la clé 'value' est la
+	 * valeur du champ dans Word.
+	 */
 	private function parseOeuvresValue(&$field) {
 		//On supprime le ", " final.
 		$value=mb_substr($field['value'], 0, -2);
@@ -334,4 +350,40 @@ class Letter {
 		
 		$field['value'] = ['artist' => "$firstName $lastName", 'work' => $duet[1]];
 	}
+
+	private function indexFieldsToString() {
+		if(!is_array($this->indexFields))
+			return ['',''];
+		
+		$nominum=$theme='';
+		foreach ($this->indexFields as $field) {
+			switch ($field['index']) {
+				case 'nominum':
+					$nominum.=$field['value'].self::CSV_SUBSEPARATOR;
+					break;
+				
+				case 'thématique':
+				case 'rerum':
+					foreach ($field['value'] as $value)
+						$theme.=$value.self::CSV_SUBSEPARATOR;
+					break;
+				
+				case 'œuvres':
+					$theme.=$field['value']['artist'].self::CSV_SUBSEPARATOR;
+					$theme.=$field['value']['work'].self::CSV_SUBSEPARATOR;
+					break;
+
+				default:
+					throw new \Exception("Champ d’index incconu : {$field['index']}.");
+			}
+		}
+		//On ôte le dernier SUBSEPARATOR s’il est présent
+		if(mb_substr($nominum, -mb_strlen(self::CSV_SUBSEPARATOR)) == self::CSV_SUBSEPARATOR)
+			$nominum=mb_substr($nominum, 0, mb_strlen ($nominum)-mb_strlen(self::CSV_SUBSEPARATOR));
+		if(mb_substr($theme, -mb_strlen(self::CSV_SUBSEPARATOR)) == self::CSV_SUBSEPARATOR)
+			$theme=mb_substr($theme, 0, mb_strlen ($theme)-mb_strlen(self::CSV_SUBSEPARATOR));
+		
+		return [$nominum, $theme];
+	}
+
 }
