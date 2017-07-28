@@ -32,9 +32,23 @@ class Letter {
 		return $this->errors;
 	}
 	
+	/**
+	 * Donne une représentation CSV des propriétés.
+	 * @return string Une ligne de CSV
+	 */
+	public function __toString() {
+		$handle = fopen('php://memory', 'w');
+		$data = [$this->fileName,$this->date,$this->titre,$this->type,$this->nbPages,
+				$this->copyright,$this->copyrightAddress,$this->incipit];
+		fputcsv($handle, $data);
+		
+		fseek($handle, 0);
+		return stream_get_contents($handle);
+	}
+	
 	private function updateData() {
 		$zip = new \ZipArchive();
-		$zip->open($this->fileName);
+		$zip->open(Volume5::LETTERS.$this->fileName);
 		
 		$xml = new \SimpleXMLElement($zip->getFromName('word/document.xml'));
 		
@@ -64,7 +78,7 @@ class Letter {
 //		echo $this->copyright.PHP_EOL;
 //		echo $this->copyrightAddress.PHP_EOL;
 //		echo $this->incipit.PHP_EOL;
-		print_r($this->fields);
+//		print_r($this->fields);
 	}
 	
 	private function readStyle(\SimpleXMLElement $p) {
@@ -146,7 +160,7 @@ class Letter {
 	private function parseDate($paragraphes) {
 		try {
 			$pWithDate = $this->findStyle($paragraphes, "DateLettre");
-			$this->date = $this->readText($pWithDate);
+			$this->date = trim($this->readText($pWithDate));
 		} catch(\Exception $e) {
 			$this->errors[]=$e->getMessage();
 		}

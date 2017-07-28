@@ -21,11 +21,18 @@ class Volume5 {
 		$files = array_diff(scandir(self::LETTERS), ['.','..']);
 		
 		foreach ($files as $file){
-			$this->letters[] = new Letter(self::LETTERS.$file);
-			break;
+			$this->letters[] = new Letter($file);
 		}
+	}
+	
+	public function __toString() {
+		return
+			'"fichier","date","titre","type","nbPages","copyright",'
+		. '"copyrightAddress","incipit"'.PHP_EOL
+			.implode("", $this->letters);
 	}
 }
 echo '<pre>';
 $cleaner=new Volume5();
 $cleaner->loop();
+echo $cleaner;
