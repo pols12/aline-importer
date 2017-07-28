@@ -179,7 +179,11 @@ class Letter {
 	}
 
 	private function parseIncipit(array $paragraphes) {
-		$datePKey = array_search($this->findStyle($paragraphes, "DateLettre"), $paragraphes);
+		try {
+			$datePKey = array_search($this->findStyle($paragraphes, "DateLettre"), $paragraphes);
+		} catch(\Exception $e) {
+			$datePKey = -1;
+		}
 		//On cherche le premier paragraphe non vide.
 		$i=-1;
 		foreach ($paragraphes as $p) {
