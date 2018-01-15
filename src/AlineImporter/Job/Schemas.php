@@ -898,10 +898,10 @@ const CHPS=[
 			'dcterms:title'=>[
 				'type' => 'literal',
 				'defaultValue' => '%s (ville)',
-				'defaultValueColumns' => ['dstsite']],
+				'defaultValueColumns' => ['expsite']],
 			'locn:postName' => [
 				'type' => 'literal',
-				'valueColumn' => 'dstsite'],
+				'valueColumn' => 'expsite'],
 		],
 	],
 	'Destinataire'=>[ //si bioid != 0
