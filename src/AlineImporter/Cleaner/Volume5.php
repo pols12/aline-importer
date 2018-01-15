@@ -2,9 +2,6 @@
 
 namespace AlineImporter\Cleaner;
 
-//use PhpOffice\PhpWord\IOFactory;
-//use PhpOffice\PhpWord\PhpWord;
-
 include_once __DIR__.'/Letter.php';
 
 /**
@@ -17,7 +14,7 @@ class Volume5 {
 	
 	protected $letters=[];
 
-	public function loop() {
+	public function handleAllLetters() {
 		$files = array_diff(scandir(self::LETTERS), ['.','..']);
 		
 		foreach ($files as $file){
@@ -34,5 +31,5 @@ class Volume5 {
 }
 echo '<pre>';
 $cleaner=new Volume5();
-$cleaner->loop();
+$cleaner->handleAllLetters();
 echo $cleaner;
