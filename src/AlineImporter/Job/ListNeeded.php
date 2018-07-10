@@ -1,6 +1,7 @@
 <?php
 
 namespace AlineImporter\Job;
+//include 'Schemas_withoutAHPO.php'; //old config file which don’t use AHP ontology
 include 'Schemas.php';
 
 class ItemType {
