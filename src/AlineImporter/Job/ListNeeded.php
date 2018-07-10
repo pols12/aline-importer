@@ -3,9 +3,40 @@
 namespace AlineImporter\Job;
 include 'Schemas.php';
 
-class ListNeeded implements Schemas {
+class ItemType {
+	public $name, $properties;
+	
+	public function __construct($name) {
+		$this->name=$name;
+		$this->properties=[];
+		return $this;
+	}
+
+	public function __toString() {
+		$str = "$this->name \n";
+		foreach($this->properties as $voc => $props_arr) {
+			$props_str = implode(', ', $props_arr);
+			$str .= "   $voc : $props_str \n";
+		}
+		return $str;
+	}
+
+	public function addTerm(string $term) {
+		$term_array = explode(":",$term);
+		$voc = $term_array[0];
+		$prop = $term_array[1];
+		if( !array_key_exists($voc, $this->properties)
+				|| !in_array($prop, $this-> properties[$voc]) ) {
+			$this->properties[$voc][] = $prop;
+			return true;
+		}
+		else return false;
+	}
+}
+
+class SchemaAnalyser implements Schemas {
 	public $tables=['ARCHIVES', 'CHPS', 'CHP_AUTHOR', 'HPPB', 'HPP_MISC', 'HPRPTPHD'];
-	public function __construct(){
+	public function listNeeded(){
 		$vocs=[];
 		$sets=[];
 		$templates=[];
@@ -31,7 +62,7 @@ class ListNeeded implements Schemas {
 		}
 		echo '<pre>';
 		echo 'Tables : '.strtolower(implode(", ",$this->tables)).PHP_EOL;
-		echo 'Vocabulaires : '.implode(", ",$vocs).PHP_EOL;
+		echo 'Vocabulaires : '.print_r($vocs,true); // .implode(", ",$vocs).PHP_EOL;
 		echo 'Item sets : '.implode(", ",$sets).PHP_EOL;
 		echo 'Resource templates : '.implode(", ",$templates).PHP_EOL;
 	}
@@ -44,10 +75,34 @@ class ListNeeded implements Schemas {
 	 */
 	private function getVocFromProperties(array &$vocs, array $propertySchemas) {
 		foreach($propertySchemas as $term => $schema){
-			$voc=explode(":",$term)[0];
-			if(!in_array($voc, $vocs))
-				$vocs[]=$voc;
+			$term_array = explode(":",$term);
+			$voc = $term_array[0];
+			$prop = $term_array[1];
+			if( !array_key_exists($voc, $vocs) || !in_array($prop, $vocs[$voc]) ) // if(!in_array($voc, $vocs))
+				$vocs[$voc][] = $prop; // $vocs[]=$voc;
 		}
 	}
+
+	public function listItems() {
+		$items=[];
+		foreach($this->tables as $tableName){
+			$table=constant("self::$tableName");
+			foreach($table as $itemName => $item){
+				if(!isset($items[$itemName])) 
+					$items[$itemName] = new ItemType($itemName);
+				foreach($item['propertySchemas'] as $term => $schema)
+					$items[$itemName]->addTerm($term);
+			}
+		}
+		return $items;
+	}
+	public function displayItems(array $items = []) {
+		if(empty($items)) $items = $this->listItems();
+
+		foreach($items as $item) echo "$item\n\n";
+	}
 }
-$rien=new ListNeeded();
+$analyser=new SchemaAnalyser();
+echo '<pre>';
+$analyser->displayItems();
+$analyser->listNeeded();
