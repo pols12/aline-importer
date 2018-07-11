@@ -579,9 +579,19 @@ trait ImportTrait {
 		//Mais on renverra une chaine vide si la valeur...
 		
 		//... est une valeur poubelle
-		if( isset($schema['dustValues'])
-				&& in_array($value, $schema['dustValues']) )
+		if(isset($schema['dustValues'])) {
+			if(in_array((string) $value, $schema['dustValues'], true))
 				$value='';
+			elseif(isset($schema['dustValues']['regex']))
+				foreach($schema['dustValues']['regex'] as $regex) {
+					$matches=[];
+					preg_match($regex, $value, $matches);
+					if(isset($matches[1])) { //Si on a capturé une bonne partie de la valeur
+						$value = $matches[1]; //on garde cette bonne partie
+						break;
+					}
+				}
+		}
 		
 		//... est en double
 		elseif( isset($schema['duplicates']) ) {
