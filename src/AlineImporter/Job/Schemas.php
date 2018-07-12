@@ -1007,8 +1007,27 @@ const CHPS=[
 			],
 			'Éditeur' => [
 				'public' => false,
-				'valueColumn' => 'ed', //Valeur à transformer
+				'valueColumn' => 'ed',
 				'ingest' => 'text',
+				'transform' => [
+					'ac' => 'André Coret',
+					'am' => 'Amirouche Moktefi',
+					'dr' => 'David Rowe',
+					'eb' => 'Étienne Bolmont',
+					'fb' => 'Frédéric Bréchenmacher',
+					'gh' => 'Gerhard Heinzmann',
+					'jg' => 'Jérémy Gray',
+					'jm' => 'Jean Mawhin',
+					'kr' => "kr\nRalf Krömer ?",
+					'kv' => 'Klaus Volkert',
+					'lr' => 'Laurent Rollet',
+					'ms' => 'Martina Schiavon',
+					'ob' => 'Olivier Bruneau',
+					'ph' => 'Philippe Henry',
+					'pn' => 'Philippe Nabonnand',
+					'rk' => 'Ralf Krömer',
+					'sw' => 'Scott A. Walter',
+				],
 				'propertySchemas' => [
 					'dcterms:title'=>[
 						'type' => 'literal',
@@ -1112,24 +1131,6 @@ const CHPS=[
 //	'Piege'=>[], // Pour éviter d’importer ce qu’il y a en dessous de cette ligne
 //*/
 /*	'Varia' => [ //À RENSEIGNER
-		'resource_class' => 'dcterms:Location',
-		'resource_template' => 'Lieu d’archives',
-		'item_set' => 'Lieux d’archives',
-		'persist_column' => 'archiveOId',
-		'propertySchemas'=> [
-			'dcterms:title'=>[
-				'type' => 'literal',
-				'valueColumn' => 'name'],
-			'locn:address'=>[
-				'type' => 'resource',
-				'itemIdColumn' => 'AddressItem',
-				'targetTable' => 'archives',
-				'foreignKeyColumn' => null,
-				'schemaIndex' => 0],
-			'foaf:homepage'=>[
-				'type' => 'uri',
-				'valueColumn' => 'url'],
-		]
 	] */
 ];
 const HPP_MISC= [
@@ -1345,7 +1346,7 @@ const HPRPTPHD = [
 				'type' => 'literal',
 				'valueColumn' => 'pb'],
 			'ahpo:inBook'=>[
-				'type' => 'resource', //ehp:inBook
+				'type' => 'resource',
 				'foreignTable' => 'hprptphd',
 				'schemaIndex' => 'Volume'],
 			'ahpo:classificationNumber'=>[ //endroit dans les archives
