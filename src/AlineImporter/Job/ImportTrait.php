@@ -40,7 +40,8 @@ trait ImportTrait {
 		
 		$this->logger->info("Début de l’import des {$itemSchema['item_set']}...");
 		
-		//si le schéma définit une colonne unique, et des valeurs poubelle, on les précise
+		//Si le schéma définit des colonnes uniques, des valeurs poubelle
+		//ou une condition, on les précise
 		$uniqueColumns = $this->getUniqueColumns($itemSchema);
 		$dustValues = isset($itemSchema['dustValues']) ? $itemSchema['dustValues'] : [];
 		$condition = isset($itemSchema['condition']) ? $itemSchema['condition'] : '1=1';
@@ -58,7 +59,7 @@ trait ImportTrait {
 				&& (0!=count($valueRows))
 				&& $this->offset < $this->maxOffset)
 		{
-			$this->logger->info("Nombre de cycle nettoyés :".gc_collect_cycles());
+			$this->logger->info("Nombre de cycles nettoyés :".gc_collect_cycles());
 			$this->logger->info("Requête SELECT sur Aline finalisée : "
 					.count($valueRows)." lignes récupérées.");
 
@@ -350,6 +351,10 @@ trait ImportTrait {
 					$text = $this->getFile($fileId); //on importe son contenu.
 				}
 				if(empty($text)) continue;
+				
+				//Si elle est définie, on applique la transformation
+				if(isset($schema['transform']) && isset($schema['transform'][$text]))
+					$text = $schema['transform'][$text];
 
 				$genericMediaData= [
 					"o:ingester" => "html",
