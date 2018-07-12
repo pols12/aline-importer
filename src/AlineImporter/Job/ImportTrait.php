@@ -157,30 +157,31 @@ trait ImportTrait {
 			if(isset($schema['nullPropertyRequired']) //si la propriété requise
 					&& !empty($properties[$schema['nullPropertyRequired']])) //a une valeur
 				continue; //alors on n’ajoute pas cette propriété
+			
 			$data=$schema;
 			switch ($data['type']){
 				case 'uri':
 					$value=$this->getPropertyValue($schema, $values);
 					//l’URI doit commencer par http
-					$data['@id']='http' !== substr($value, 0, 4) && !empty($value)
+					$data['@id'] = 'http' !== substr($value, 0, 4) && !empty($value)
 							? "http://$value" : $value;
 					break;
 				
 				case 'resource':
-					$itemIdColumn=constant('self::'.strtoupper($schema['foreignTable']))
+					$itemIdColumn = constant('self::'.strtoupper($schema['foreignTable']))
 						[$schema['schemaIndex']] ['persist_column'];
-					$data['value_resource_id']=$values[$itemIdColumn];
+					$data['value_resource_id'] = $values[$itemIdColumn];
 					break;
 				
 				default : //'literal' le + souvent
-					$data['@value']= $this->getPropertyValue($schema, $values);
+					$data['@value'] = $this->getPropertyValue($schema, $values);
 			}
 			unset($data['valueColumn'], $data['defaultValue'], $data['defaultValueColumns']);
 			
 			if($recursive)
-				$properties[$term]=$data;
+				$properties[$term] = $data; //$term est un indice numérique
 			else
-				$properties[$term]=[$data];
+				$properties[$term] = [$data];
 		}
 		return $properties;
 	}
@@ -607,6 +608,10 @@ trait ImportTrait {
 				}
 			}
 		}
+		
+		//Si une transformation est définie, on l’applique
+		if(isset($schema['transform']) && isset($schema['transform'][$text]))
+			$text = $schema['transform'][$text];
 		
 		return $value;
 	}
