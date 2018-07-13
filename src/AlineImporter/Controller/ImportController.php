@@ -64,15 +64,16 @@ class ImportController extends AbstractActionController
 		$startOffset=$form->getData()['startOffset'];
 		$endOffset=$form->getData()['endOffset'];
 		/* @var $job \Omeka\Entity\Job */
-//		$job = $this->jobDispatcher()->dispatch(Import::class,
-//				['table'=>$table, 'startOffset'=>$startOffset, 'endOffset'=>$endOffset]);
+		$job = $this->jobDispatcher()->dispatch(Import::class,
+				['table'=>$table, 'startOffset'=>$startOffset, 'endOffset'=>$endOffset]);
 		
 		//Lancement de l’import sans utiliser de Job (lorsque php-cli n’est pas dispo)
-		$task = new ImportTask($table,$this->api,$this->logger, $this->pdo, $startOffset, $endOffset);
-		$task->perform();
+//		$task = new ImportTask($table,$this->api,$this->logger, $this->pdo, $startOffset, $endOffset);
+//		$task->perform();
 		
-		$content = "Import de la table $table lancé.<br>";
-				//. "<a href='/omeka-s/admin/job/{$job->getId()}'>Voir l’état</a>" ;
+		$content = "Import de la table $table lancé.<br>"
+				. "<a href='/omeka-s/admin/job/{$job->getId()}'>Voir l’état</a><br>"
+				. "<a href='/omeka-s/aline-importer'>Nouvel import</a><br>" ;
 		
 		return new ViewModel([
 			'content' => $content
