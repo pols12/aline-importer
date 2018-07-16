@@ -610,8 +610,8 @@ trait ImportTrait {
 		}
 		
 		//Si une transformation est définie, on l’applique
-		if(isset($schema['transform']) && isset($schema['transform'][$text]))
-			$text = $schema['transform'][$text];
+		if(isset($schema['transform']) && isset($schema['transform'][$value]))
+			$value = $schema['transform'][$value];
 		
 		return $value;
 	}
