@@ -600,7 +600,7 @@ trait ImportTrait {
 		}
 		
 		//... est en double
-		elseif( isset($schema['duplicates']) ) {
+		if( isset($schema['duplicates']) ) {
 			foreach ($schema['duplicates'] as $col) {
 				if($values[$col]===$value){
 					$value='';
