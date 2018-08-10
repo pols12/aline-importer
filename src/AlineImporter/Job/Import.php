@@ -27,10 +27,10 @@ class Import extends AbstractJob implements Schemas {
 		$this->logger = $this->getServiceLocator()->get('Omeka\Logger');
 		\Zend\Log\Logger::registerErrorHandler($this->logger);
 		
-		$this->logger->info("Augmentation de la mémoire. Valeur précédente : "
-				.ini_set('memory_limit', '256M'));
-		$this->logger->info("Augmentation du temps limite à 120 :"
-				.(set_time_limit(120) ? "OK" : "échec"));
+//		$this->logger->info("Augmentation de la mémoire. Valeur précédente : "
+//				.ini_set('memory_limit', '256M'));
+//		$this->logger->info("Augmentation du temps limite à 120 :"
+//				.(set_time_limit(120) ? "OK" : "échec"));
 		
 		//On récupère le nom de la table à importer depuis les arguments
 		$this->table = self::PREFIX.$this->getArg('table');
