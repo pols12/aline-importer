@@ -496,7 +496,7 @@ const HPPB=[
 	'Numéro'=>[
 		'condition' => "bk IS NULL OR bk=''",
 		'resource_class' => 'ahpo:Issue',
-		'resource_template' => 'Ouvrage',
+		'resource_template' => 'Numéro de revue',
 		'item_set' => 'Numéros des journaux ayant publié Poincaré',
 		'persist_column' => 'numeroOId',
 		'uniqueTerms' => ['ahpo:issueOf', 'ahpo:issueNumber', 'ahpo:volumeNumber'],
@@ -1193,7 +1193,7 @@ const HPP_MISC= [
 		],
 	],
 	'Commentaire'=>[ //Ouvrage contenant des articles
-		'resource_class' => 'ahpo:Article',
+		'resource_class' => 'ahpo:Commentary',
 		'resource_template' => 'Commentaire',
 		'item_set' => 'Commentaires de l’édition de la correspondance',
 		'persist_column' => 'commentaireOId',

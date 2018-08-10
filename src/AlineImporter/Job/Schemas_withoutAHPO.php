@@ -1098,24 +1098,6 @@ const CHPS=[
 //	'Piege'=>[], // Pour éviter d’importer ce qu’il y a en dessous de cette ligne
 //*/
 /*	'Varia' => [ //À RENSEIGNER
-		'resource_class' => 'dcterms:Location',
-		'resource_template' => 'Lieu d’archives',
-		'item_set' => 'Lieux d’archives',
-		'persist_column' => 'archiveOId',
-		'propertySchemas'=> [
-			'dcterms:title'=>[
-				'type' => 'literal',
-				'valueColumn' => 'name'],
-			'locn:address'=>[
-				'type' => 'resource',
-				'itemIdColumn' => 'AddressItem',
-				'targetTable' => 'archives',
-				'foreignKeyColumn' => null,
-				'schemaIndex' => 0],
-			'foaf:homepage'=>[
-				'type' => 'uri',
-				'valueColumn' => 'url'],
-		]
 	] */
 ];
 const HPP_MISC= [
